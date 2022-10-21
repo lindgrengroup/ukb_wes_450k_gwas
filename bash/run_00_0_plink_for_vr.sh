@@ -25,6 +25,7 @@ run_job() {
 		--name="plink_for_vr_c${chrom}" \
 		--instance-type "mem2_ssd1_v2_x4" \
 		--destination="/saige_pipeline/data/00_set_up" \
+		--brief \
 		-y
 	
 }

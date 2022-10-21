@@ -7,10 +7,12 @@
 
 readonly chrom=$1
 readonly array_bfile="/mnt/project/Bulk/Genotype Results/Genotype calls/ukb22418_c${chrom}_b0_v2"
-readonly out="ukb_array_for_vr_chr${chrom}"
+readonly samples_w_superpop="/mnt/project/saige_pipeline/data/00_set_up/ukb_wes_450k.qced.sample_list_w_superpops.tsv"
+readonly out="ukb_array.wes_450k_qc_pass_eur.for_vr.chr${chrom}"
 
 #1. Calculate allele counts for each marker in the large PLINK file with hard called genotypes
 plink2 \
+  --keep <( awk '{ if ($2=="EUR") print $1,$1 }' "${samples_w_superpop}" ) \
   --bfile "${array_bfile}" \
   --freq counts \
   --out "${out}"

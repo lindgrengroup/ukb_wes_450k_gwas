@@ -61,7 +61,7 @@
       "help": ""
     },
     {
-      "name": "output_file",
+      "name": "output_prefix",
       "class": "string",
       "optional": false,
       "patterns": [

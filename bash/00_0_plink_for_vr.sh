@@ -32,8 +32,10 @@ cat <(
 
 
 #3. Extract markers from the large PLINK file
+#   (and don't forget to still subset to Europeans)
 plink2 \
   --bfile "${array_bfile}" \
+  --keep <( awk '{ if ($2=="EUR") print $1,$1 }' "${samples_w_superpop}" ) \
   --extract "${out}.markerid.list" \
   --make-bed \
   --out "${out}"

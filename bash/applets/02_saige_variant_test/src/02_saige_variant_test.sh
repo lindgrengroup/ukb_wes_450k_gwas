@@ -9,7 +9,7 @@ main() {
     ## Set up directories
     WD=$( pwd )
     mkdir plink_files
-    mkdir -p out/output_file
+    mkdir -p out/{output,log}_file
     
     ## Download input files
     for suffix in {bed,bim,fam}; do
@@ -32,9 +32,9 @@ main() {
     docker_dir="/mnt/home"
     docker run \
       -e chrom="${chrom}"  \
-      -e output_file="${output_file}"  \
+      -e output_prefix="${output_prefix}"  \
       -v "${WD}":"${docker_dir}" \
-      wzhou88/saige:1.1.6.1 step2_SPAtests.R  \
+      wzhou88/saige:1.1.6.1 /bin/bash -c """step2_SPAtests.R  \
         --bedFile="${docker_dir}/plink_files/bfile.bed" \
         --bimFile="${docker_dir}/plink_files/bfile.bim" \
         --famFile="${docker_dir}/plink_files/bfile.fam" \
@@ -51,13 +51,17 @@ main() {
         --sparseGRMFile="${docker_dir}/sparse_grm"  \
         --sparseGRMSampleIDFile="${docker_dir}/sparse_grm_samples" \
         --is_fastTest=TRUE  \
-        --SAIGEOutputFile="${docker_dir}/${output_file}"    
+        --SAIGEOutputFile="${docker_dir}/${output_prefix}.tsv" 2>&1 | tee "${docker_dir}/${output_prefix}.log"
+        """
 
-    # ls -la ${docker_dir}    
-    ls -la
-    
-    mv "${output_file}" out/output_file/
-    mv "*.log" out/log_file/
+    # docker run \
+    #   -e chrom="${chrom}"  \
+    #   -e output_prefix="${output_prefix}"  \
+    #   -v "${WD}":"${docker_dir}" \
+    #   wzhou88/saige:1.1.6.1 /bin/bash -c """echo 'test run' 2>&1 | tee "${docker_dir}/${output_prefix}.log"; touch ${docker_dir}/${output_prefix}.tsv"""
+
+    mv "${output_prefix}.tsv" out/output_file/
+    mv "${output_prefix}.log" out/log_file/
 
     dx-upload-all-outputs
 }

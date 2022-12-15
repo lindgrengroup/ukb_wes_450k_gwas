@@ -18,7 +18,7 @@ for chrom in {1..22}; do
 	get_bfile ${chrom} ${dataset} >> merge_list.txt
 done
 if ${include_chrX}; then
-	get_bfile "X" >> merge_list.txt
+	get_bfile "X" ${dataset} >> merge_list.txt
 fi
 
 plink \

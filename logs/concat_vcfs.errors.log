@@ -1,0 +1,136 @@
++ set -o errexit
++ set -o nounset
++ for util_type in '{qsub,hail}'
++ source /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh
+++ _source=/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh
+++ '[' -h /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh ']'
+++++ dirname /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh
++++ cd -P /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash
++++ cd ../
++++ pwd
+++ ukb_utils_dir=/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils
++ for util_type in '{qsub,hail}'
++ source /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/hail_utils.sh
+++ _source=/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/hail_utils.sh
+++ '[' -h /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/hail_utils.sh ']'
+++++ dirname /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/hail_utils.sh
++++ cd -P /well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash
++++ cd ../
++++ pwd
+++ ukb_utils_dir=/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils
+++ source /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh
++++ _source=/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh
++++ '[' -h /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh ']'
++++++ dirname /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash/qsub_utils.sh
+++++ cd -P /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils/bash
+++++ cd ../
+++++ pwd
++++ ukb_utils_dir=/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ukb_utils
++ module load BCFtools/1.12-GCC-10.3.0
+++ /gpfs0/mgmt/modules/Modules/3.2.10/bin/modulecmd bash load BCFtools/1.12-GCC-10.3.0
++ eval ACLOCAL_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/share/aclocal:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/share/aclocal ';export' 'ACLOCAL_PATH;CMAKE_LIBRARY_PATH=/apps/eb/2020b/skylake/software/GCCcore/10.3.0/lib64' ';export' 'CMAKE_LIBRARY_PATH;CMAKE_PREFIX_PATH=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/OpenSSL/1.1:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/GCCcore/10.3.0' ';export' 'CMAKE_PREFIX_PATH;CPATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/include:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/include:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/OpenSSL/1.1/include:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/include' ';export' 'CPATH;CURL_INCLUDES=/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/include' ';export' 'CURL_INCLUDES;EBDEVELBCFTOOLS=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/easybuild/BCFtools-1.12-GCC-10.3.0-easybuild-devel' ';export' 'EBDEVELBCFTOOLS;EBDEVELBINUTILS=/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/easybuild/binutils-2.36.1-GCCcore-10.3.0-easybuild-devel' ';export' 'EBDEVELBINUTILS;EBDEVELBZIP2=/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/easybuild/bzip2-1.0.8-GCCcore-10.3.0-easybuild-devel' ';export' 'EBDEVELBZIP2;EBDEVELCURL=/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/easybuild/cURL-7.76.0-GCCcore-10.3.0-easybuild-devel' ';export' 'EBDEVELCURL;EBDEVELGCC=/apps/eb/2020b/skylake/software/GCC/10.3.0/easybuild/GCC-10.3.0-easybuild-devel' ';export' 'EBDEVELGCC;EBDEVELGCCCORE=/apps/eb/2020b/skylake/software/GCCcore/10.3.0/easybuild/GCCcore-10.3.0-easybuild-devel' ';export' 'EBDEVELGCCCORE;EBDEVELGSL=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/easybuild/GSL-2.7-GCC-10.3.0-easybuild-devel' ';export' 'EBDEVELGSL;EBDEVELHTSLIB=/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/easybuild/HTSlib-1.12-GCC-10.3.0-easybuild-devel' ';export' 'EBDEVELHTSLIB;EBDEVELOPENSSL=/apps/eb/2020b/skylake/software/OpenSSL/1.1/easybuild/OpenSSL-1.1-easybuild-devel' ';export' 'EBDEVELOPENSSL;EBDEVELXZ=/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/easybuild/XZ-5.2.5-GCCcore-10.3.0-easybuild-devel' ';export' 'EBDEVELXZ;EBDEVELZLIB=/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/easybuild/zlib-1.2.11-GCCcore-10.3.0-easybuild-devel' ';export' 'EBDEVELZLIB;EBROOTBCFTOOLS=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0' ';export' 'EBROOTBCFTOOLS;EBROOTBINUTILS=/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0' ';export' 'EBROOTBINUTILS;EBROOTBZIP2=/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0' ';export' 'EBROOTBZIP2;EBROOTCURL=/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0' ';export' 'EBROOTCURL;EBROOTGCC=/apps/eb/2020b/skylake/software/GCCcore/10.3.0' ';export' 'EBROOTGCC;EBROOTGCCCORE=/apps/eb/2020b/skylake/software/GCCcore/10.3.0' ';export' 'EBROOTGCCCORE;EBROOTGSL=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0' ';export' 'EBROOTGSL;EBROOTHTSLIB=/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0' ';export' 'EBROOTHTSLIB;EBROOTOPENSSL=/apps/eb/2020b/skylake/software/OpenSSL/1.1' ';export' 'EBROOTOPENSSL;EBROOTXZ=/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0' ';export' 'EBROOTXZ;EBROOTZLIB=/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0' ';export' 'EBROOTZLIB;EBVERSIONBCFTOOLS=1.12' ';export' 'EBVERSIONBCFTOOLS;EBVERSIONBINUTILS=2.36.1' ';export' 'EBVERSIONBINUTILS;EBVERSIONBZIP2=1.0.8' ';export' 'EBVERSIONBZIP2;EBVERSIONCURL=7.76.0' ';export' 'EBVERSIONCURL;EBVERSIONGCC=10.3.0' ';export' 'EBVERSIONGCC;EBVERSIONGCCCORE=10.3.0' ';export' 'EBVERSIONGCCCORE;EBVERSIONGSL=2.7' ';export' 'EBVERSIONGSL;EBVERSIONHTSLIB=1.12' ';export' 'EBVERSIONHTSLIB;EBVERSIONOPENSSL=1.1' ';export' 'EBVERSIONOPENSSL;EBVERSIONXZ=5.2.5' ';export' 'EBVERSIONXZ;EBVERSIONZLIB=1.2.11' ';export' 'EBVERSIONZLIB;LD_LIBRARY_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/OpenSSL/1.1/lib:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/lib64:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/lib' ';export' 'LD_LIBRARY_PATH;LIBRARY_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/OpenSSL/1.1/lib:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/lib' ';export' 'LIBRARY_PATH;LOADEDMODULES=PLINK/2.00-alpha2-x86_64:Anaconda3/2020.07:GCCcore/10.3.0:zlib/1.2.11-GCCcore-10.3.0:binutils/2.36.1-GCCcore-10.3.0:GCC/10.3.0:bzip2/1.0.8-GCCcore-10.3.0:XZ/5.2.5-GCCcore-10.3.0:OpenSSL/1.1:cURL/7.76.0-GCCcore-10.3.0:HTSlib/1.12-GCC-10.3.0:GSL/2.7-GCC-10.3.0:BCFtools/1.12-GCC-10.3.0' ';export' 'LOADEDMODULES;MANPATH=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/share/man:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/share/man:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/share/man:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/OpenSSL/1.1/share/man:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/man:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/share/man:/mgmt/uge/8.6.8/man:/apps/eb/skylake/software/Anaconda3/2020.07/share/man:/apps/eb/skylake/software/Anaconda3/2020.07/man:/mgmt/uge/8.6.8/man:/usr/share/man:/usr/local/share/man' ';export' 'MANPATH;PATH=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/bin:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/bin:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/bin:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/OpenSSL/1.1/bin:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/bin:/mgmt/uge/8.6.8/bin/lx-amd64:/apps/eb/skylake/software/Anaconda3/2020.07:/apps/eb/skylake/software/Anaconda3/2020.07/sbin:/apps/eb/skylake/software/Anaconda3/2020.07/bin:/apps/eb/skylake/software/PLINK/2.00-alpha2-x86_64:/apps/eb/skylake/software/Anaconda3/2020.11/bin:/apps/eb/skylake/software/Anaconda3/2020.11/condabin:/mgmt/uge/8.6.8/bin/lx-amd64:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/lpp/mmfs/bin:/opt/ibutils/bin:/users/lindgren/whv244/.local/bin:/users/lindgren/whv244/bin:/users/lindgren/whv244/plink:/users/lindgren/whv244/htslib_1.11/bin:/usr/lpp/mmfs/bin:/users/lindgren/whv244/.local/bin:/users/lindgren/whv244/bin:/users/lindgren/whv244/plink:/users/lindgren/whv244/htslib_1.11/bin/' ';export' 'PATH;PKG_CONFIG_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/OpenSSL/1.1/lib/pkgconfig:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/skylake/software/Anaconda3/2020.07/lib/pkgconfig' ';export' 'PKG_CONFIG_PATH;XDG_DATA_DIRS=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/share:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/share:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/share:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/OpenSSL/1.1/share:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/share:/users/lindgren/whv244/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share' ';export' 'XDG_DATA_DIRS;_LMFILES_=/apps/eb/skylake/modules/all/PLINK/2.00-alpha2-x86_64:/apps/eb/skylake/modules/all/Anaconda3/2020.07:/apps/eb/2020b/skylake/modules/all/GCCcore/10.3.0:/apps/eb/2020b/skylake/modules/all/zlib/1.2.11-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/binutils/2.36.1-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/GCC/10.3.0:/apps/eb/2020b/skylake/modules/all/bzip2/1.0.8-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/XZ/5.2.5-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/OpenSSL/1.1:/apps/eb/2020b/skylake/modules/all/cURL/7.76.0-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/HTSlib/1.12-GCC-10.3.0:/apps/eb/2020b/skylake/modules/all/GSL/2.7-GCC-10.3.0:/apps/eb/2020b/skylake/modules/all/BCFtools/1.12-GCC-10.3.0' ';export' '_LMFILES_;'
+++ ACLOCAL_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/share/aclocal:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/share/aclocal
+++ export ACLOCAL_PATH
+++ CMAKE_LIBRARY_PATH=/apps/eb/2020b/skylake/software/GCCcore/10.3.0/lib64
+++ export CMAKE_LIBRARY_PATH
+++ CMAKE_PREFIX_PATH=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/OpenSSL/1.1:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0:/apps/eb/2020b/skylake/software/GCCcore/10.3.0
+++ export CMAKE_PREFIX_PATH
+++ CPATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/include:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/include:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/OpenSSL/1.1/include:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/include:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/include
+++ export CPATH
+++ CURL_INCLUDES=/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/include
+++ export CURL_INCLUDES
+++ EBDEVELBCFTOOLS=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/easybuild/BCFtools-1.12-GCC-10.3.0-easybuild-devel
+++ export EBDEVELBCFTOOLS
+++ EBDEVELBINUTILS=/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/easybuild/binutils-2.36.1-GCCcore-10.3.0-easybuild-devel
+++ export EBDEVELBINUTILS
+++ EBDEVELBZIP2=/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/easybuild/bzip2-1.0.8-GCCcore-10.3.0-easybuild-devel
+++ export EBDEVELBZIP2
+++ EBDEVELCURL=/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/easybuild/cURL-7.76.0-GCCcore-10.3.0-easybuild-devel
+++ export EBDEVELCURL
+++ EBDEVELGCC=/apps/eb/2020b/skylake/software/GCC/10.3.0/easybuild/GCC-10.3.0-easybuild-devel
+++ export EBDEVELGCC
+++ EBDEVELGCCCORE=/apps/eb/2020b/skylake/software/GCCcore/10.3.0/easybuild/GCCcore-10.3.0-easybuild-devel
+++ export EBDEVELGCCCORE
+++ EBDEVELGSL=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/easybuild/GSL-2.7-GCC-10.3.0-easybuild-devel
+++ export EBDEVELGSL
+++ EBDEVELHTSLIB=/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/easybuild/HTSlib-1.12-GCC-10.3.0-easybuild-devel
+++ export EBDEVELHTSLIB
+++ EBDEVELOPENSSL=/apps/eb/2020b/skylake/software/OpenSSL/1.1/easybuild/OpenSSL-1.1-easybuild-devel
+++ export EBDEVELOPENSSL
+++ EBDEVELXZ=/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/easybuild/XZ-5.2.5-GCCcore-10.3.0-easybuild-devel
+++ export EBDEVELXZ
+++ EBDEVELZLIB=/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/easybuild/zlib-1.2.11-GCCcore-10.3.0-easybuild-devel
+++ export EBDEVELZLIB
+++ EBROOTBCFTOOLS=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0
+++ export EBROOTBCFTOOLS
+++ EBROOTBINUTILS=/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0
+++ export EBROOTBINUTILS
+++ EBROOTBZIP2=/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0
+++ export EBROOTBZIP2
+++ EBROOTCURL=/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0
+++ export EBROOTCURL
+++ EBROOTGCC=/apps/eb/2020b/skylake/software/GCCcore/10.3.0
+++ export EBROOTGCC
+++ EBROOTGCCCORE=/apps/eb/2020b/skylake/software/GCCcore/10.3.0
+++ export EBROOTGCCCORE
+++ EBROOTGSL=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0
+++ export EBROOTGSL
+++ EBROOTHTSLIB=/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0
+++ export EBROOTHTSLIB
+++ EBROOTOPENSSL=/apps/eb/2020b/skylake/software/OpenSSL/1.1
+++ export EBROOTOPENSSL
+++ EBROOTXZ=/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0
+++ export EBROOTXZ
+++ EBROOTZLIB=/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0
+++ export EBROOTZLIB
+++ EBVERSIONBCFTOOLS=1.12
+++ export EBVERSIONBCFTOOLS
+++ EBVERSIONBINUTILS=2.36.1
+++ export EBVERSIONBINUTILS
+++ EBVERSIONBZIP2=1.0.8
+++ export EBVERSIONBZIP2
+++ EBVERSIONCURL=7.76.0
+++ export EBVERSIONCURL
+++ EBVERSIONGCC=10.3.0
+++ export EBVERSIONGCC
+++ EBVERSIONGCCCORE=10.3.0
+++ export EBVERSIONGCCCORE
+++ EBVERSIONGSL=2.7
+++ export EBVERSIONGSL
+++ EBVERSIONHTSLIB=1.12
+++ export EBVERSIONHTSLIB
+++ EBVERSIONOPENSSL=1.1
+++ export EBVERSIONOPENSSL
+++ EBVERSIONXZ=5.2.5
+++ export EBVERSIONXZ
+++ EBVERSIONZLIB=1.2.11
+++ export EBVERSIONZLIB
+++ LD_LIBRARY_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/OpenSSL/1.1/lib:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/lib64:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/lib
+++ export LD_LIBRARY_PATH
+++ LIBRARY_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/lib:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/OpenSSL/1.1/lib:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/lib:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/lib
+++ export LIBRARY_PATH
+++ LOADEDMODULES=PLINK/2.00-alpha2-x86_64:Anaconda3/2020.07:GCCcore/10.3.0:zlib/1.2.11-GCCcore-10.3.0:binutils/2.36.1-GCCcore-10.3.0:GCC/10.3.0:bzip2/1.0.8-GCCcore-10.3.0:XZ/5.2.5-GCCcore-10.3.0:OpenSSL/1.1:cURL/7.76.0-GCCcore-10.3.0:HTSlib/1.12-GCC-10.3.0:GSL/2.7-GCC-10.3.0:BCFtools/1.12-GCC-10.3.0
+++ export LOADEDMODULES
+++ MANPATH=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/share/man:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/share/man:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/share/man:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/OpenSSL/1.1/share/man:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/man:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/share/man:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/share/man:/mgmt/uge/8.6.8/man:/apps/eb/skylake/software/Anaconda3/2020.07/share/man:/apps/eb/skylake/software/Anaconda3/2020.07/man:/mgmt/uge/8.6.8/man:/usr/share/man:/usr/local/share/man
+++ export MANPATH
+++ PATH=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/bin:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/bin:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/bin:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/OpenSSL/1.1/bin:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/bin:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/bin:/mgmt/uge/8.6.8/bin/lx-amd64:/apps/eb/skylake/software/Anaconda3/2020.07:/apps/eb/skylake/software/Anaconda3/2020.07/sbin:/apps/eb/skylake/software/Anaconda3/2020.07/bin:/apps/eb/skylake/software/PLINK/2.00-alpha2-x86_64:/apps/eb/skylake/software/Anaconda3/2020.11/bin:/apps/eb/skylake/software/Anaconda3/2020.11/condabin:/mgmt/uge/8.6.8/bin/lx-amd64:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/lpp/mmfs/bin:/opt/ibutils/bin:/users/lindgren/whv244/.local/bin:/users/lindgren/whv244/bin:/users/lindgren/whv244/plink:/users/lindgren/whv244/htslib_1.11/bin:/usr/lpp/mmfs/bin:/users/lindgren/whv244/.local/bin:/users/lindgren/whv244/bin:/users/lindgren/whv244/plink:/users/lindgren/whv244/htslib_1.11/bin/
+++ export PATH
+++ PKG_CONFIG_PATH=/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/OpenSSL/1.1/lib/pkgconfig:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/bzip2/1.0.8-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/lib/pkgconfig:/apps/eb/skylake/software/Anaconda3/2020.07/lib/pkgconfig
+++ export PKG_CONFIG_PATH
+++ XDG_DATA_DIRS=/apps/eb/2020b/skylake/software/BCFtools/1.12-GCC-10.3.0/share:/apps/eb/2020b/skylake/software/GSL/2.7-GCC-10.3.0/share:/apps/eb/2020b/skylake/software/HTSlib/1.12-GCC-10.3.0/share:/apps/eb/2020b/skylake/software/cURL/7.76.0-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/OpenSSL/1.1/share:/apps/eb/2020b/skylake/software/XZ/5.2.5-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/binutils/2.36.1-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/zlib/1.2.11-GCCcore-10.3.0/share:/apps/eb/2020b/skylake/software/GCCcore/10.3.0/share:/users/lindgren/whv244/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share
+++ export XDG_DATA_DIRS
+++ _LMFILES_=/apps/eb/skylake/modules/all/PLINK/2.00-alpha2-x86_64:/apps/eb/skylake/modules/all/Anaconda3/2020.07:/apps/eb/2020b/skylake/modules/all/GCCcore/10.3.0:/apps/eb/2020b/skylake/modules/all/zlib/1.2.11-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/binutils/2.36.1-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/GCC/10.3.0:/apps/eb/2020b/skylake/modules/all/bzip2/1.0.8-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/XZ/5.2.5-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/OpenSSL/1.1:/apps/eb/2020b/skylake/modules/all/cURL/7.76.0-GCCcore-10.3.0:/apps/eb/2020b/skylake/modules/all/HTSlib/1.12-GCC-10.3.0:/apps/eb/2020b/skylake/modules/all/GSL/2.7-GCC-10.3.0:/apps/eb/2020b/skylake/modules/all/BCFtools/1.12-GCC-10.3.0
+++ export _LMFILES_
++ chrom=16
++ max_parts=2
++ file_list=/tmp/bcftools_file_list.txt
++ vcf_prefix=/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/data/vcf/ukb_wes_450k.qced.sites_only.chr
++ echo /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/data/vcf/ukb_wes_450k.qced.sites_only.chr16-1of2.vcf.bgz
+++ seq 2 2
++ for i in '`seq 2 ${max_parts}`'
++ echo /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/data/vcf/ukb_wes_450k.qced.sites_only.chr16-2of2.vcf.bgz
++ bgzip
++ bcftools concat --file-list /tmp/bcftools_file_list.txt
+Checking the headers and starting positions of 2 files
+Concatenating /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/data/vcf/ukb_wes_450k.qced.sites_only.chr16-1of2.vcf.bgz	1.044516 seconds
+Concatenating /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/data/vcf/ukb_wes_450k.qced.sites_only.chr16-2of2.vcf.bgz	0.988146 seconds

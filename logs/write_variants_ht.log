@@ -1,0 +1,4 @@
+2022-11-10 10:40:57 WARN  NativeCodeLoader:62 - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2022-11-10 10:40:58 WARN  Hail:37 - This Hail JAR was compiled for Spark 2.4.5, running with Spark 2.4.1.
+  Compatibility is not guaranteed.
+Finished writing table for chr9. Elapsed time: .01 hrs 

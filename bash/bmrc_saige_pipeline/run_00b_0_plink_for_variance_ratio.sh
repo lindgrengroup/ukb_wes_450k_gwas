@@ -27,7 +27,7 @@ WD="/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas"
 #   Options:
 #   - 'eur': Genetically European
 #   - 'allpop': Individuals from all populations who pass QC (i.e. no population filter)
-readonly pop=$1
+readonly pop="eur"
 
 # [OPTION] chrom
 # Chromosome to run

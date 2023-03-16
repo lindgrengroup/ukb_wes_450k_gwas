@@ -2,23 +2,41 @@
 
 set -e # Stop job if any command fails
 
-dataset=$1 # Options: pruned, for_vr
-include_chrX=true
+## OPTIONS
+# pop:
+# - 'allpop'
+# - 'eur'
+readonly pop=$1
 
-merged_bfile="ukb_array.wes_450k_qc_pass_eur.${dataset}"
+# dataset:
+# - 'pruned'
+# - 'for_vr'
+readonly dataset=$2 
 
+# include_chrX: 
+# - true
+# - false
+readonly include_chrX=true
+
+
+## INPUT
 get_bfile() {
-	local chrom=$1
-	local dataset=$2
-
-	echo "/mnt/project/saige_pipeline/data/00_set_up/ukb_array.wes_450k_qc_pass_eur.${dataset}.chr${chrom}"
+	local _dataset=$1
+	local _chrom=$2
+	
+	echo "/mnt/project/saige_pipeline/data/00_set_up/ukb_array.wes_450k_qc_pass_${pop}.${_dataset}.chr${_chrom}"
 }
 
+## OUTPUT
+merged_bfile="ukb_array.wes_450k_qc_pass_${pop}.${dataset}"
+
+
 for chrom in {1..22}; do
-	get_bfile ${chrom} ${dataset} >> merge_list.txt
+	get_bfile ${dataset} ${chrom} >> merge_list.txt
 done
+
 if ${include_chrX}; then
-	get_bfile "X" ${dataset} >> merge_list.txt
+	get_bfile ${dataset} "X" >> merge_list.txt
 fi
 
 plink \

@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-COLORS = plt.rcParams['axes.prop_cycle'].by_key()['color']
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # +
@@ -26,6 +25,19 @@ high_sample_size_obesity_phenos=[
     'bmi_impedance',
     'body_fat_percentage'
 ]
+
+obesity_phenotype_to_label_dict = {
+    'body_mass_index_bmi': 'BMI',
+    'whr_adj_bmi': 'WHRadjBMI',
+    'bmi_impedance': 'Impedance BMI',
+    'body_fat_percentage': 'Body fat percentage',
+    'visceral_adipose_tissue_volume_vat':'Visceral adipose tissue',
+    'abdominal_fat_ratio': 'Abdominal fat ratio',
+    'gynoid_tissue_fatp': 'Gynoid tissue fat percentage',
+    'android_tissue_fatp': 'Android tissue fat percentage',
+    'total_tissue_fatp': 'Total tissue fat percentage',
+    'tissuefatp_androidgynoidratio': 'Android-gynoid fat percentage ratio'
+}
 # -
 
 BIOMARKERS = pd.read_csv(
@@ -43,6 +55,8 @@ SET_TEST_GROUPS = [
     'Cauchy'   
 ]
 
+GWS_PVAL_THRESHOLD = 5e-8
+
 # +
 # pheno_to_label_dict = dict(zip(BIOMARKERS, BIOMARKERS)) # placeholder
 # # pheno_to_label_dict = dict(zip(BIOMARKERS, [p.replace('_',' ') for p in BIOMARKERS]))
@@ -57,34 +71,41 @@ LOCAL_PLOTS_DIR=f'{LOCAL_WD}/plots'
 DATA_DIR=LOCAL_DATA_DIR
 
 def get_saige_results_path(pheno, chrom, phenotype_group='qced_biomarkers', 
-    pop='eur', sex='both_sexes', assoc='variant'):
-    return f'{DATA_DIR}/02_saige_{assoc}_test/{phenotype_group}/{pop}/{sex}/saige_{assoc}_test.{pheno}-{pop}-{sex}.chr{chrom}.tsv.gz'
+    pop='eur', sex='both_sexes', assoc='variant_test'):
+    return f'{DATA_DIR}/02_saige_{assoc}/{phenotype_group}/{pop}/{sex}/saige_{assoc}.{pheno}-{pop}-{sex}.chr{chrom}.tsv.gz'
 
-def get_consequence_path(chrom):
-    return f'{DATA_DIR}/annotations/wes_450k/ukb_wes_450k.qced.chr{chrom}.worst_csq_by_gene_canonical.txt.gz'
+# +
+def get_old_consequence_path(chrom):
+    return f'{DATA_DIR}/annotations/old-wes_450k/ukb_wes_450k.qced.chr{chrom}.worst_csq_by_gene_canonical.txt.gz'
+
+def get_consequence_path(chrom=None):
+    return f'{DATA_DIR}/annotations/wes_450k/ukb_wes_450k.qced.brava.v1{f".chr{chrom}" if chrom is not None else ""}.worst_csq_by_gene_canonical.txt.gz'
+
+
+# -
 
 def get_consequence_file(chrom):
     return pd.read_csv(get_consequence_path(chrom), compression='gzip', delim_whitespace=True)
 
 def get_all_consequence_files():
-    """Only autosomes
-    """
-    csq_df_list = [get_consequence_file(chrom=chrom) for chrom in range(1,23)]
+    csq_df_list = [get_consequence_file(chrom=chrom) for chrom in list(range(1,23))+['X']]
     csq = pd.concat(csq_df_list, axis=0)
     csq = csq.rename(columns={'varid':'MarkerID'})
     return csq
 
 def get_unique_variant_genes_and_consequences_path():
-    return f'{DATA_DIR}/annotations/wes_450k/ukb_wes_450k.qced.worst_csq_by_gene_canonical.grouped_by_variant.tsv.gz'
+    return get_consequence_path(chrom=None)
 
 
-def write_unique_variant_genes_and_consequences():
+def write_unique_variant_genes_and_consequences(all_csq_files=None):
     def concat_genes(x):
         return '/'.join(x)
     
-    csq = get_all_consequence_files()
-    csq = csq.drop(columns=['locus','alleles'])
-    csq_grouped = csq.groupby(['MarkerID','consequence_category']).agg((concat_genes))
+    if all_csq_files is None:
+        all_csq_files = get_all_consequence_files()
+    all_csq_files = all_csq_files.drop(columns=['locus','alleles'])
+    csq_grouped = all_csq_files.groupby(['MarkerID','consequence_category']).agg((concat_genes))
+    csq_grouped = csq_grouped.reset_index()
     
     csq_grouped.to_csv(
         get_unique_variant_genes_and_consequences_path(),
@@ -92,6 +113,8 @@ def write_unique_variant_genes_and_consequences():
         sep='\t',
         index=False
     )
+    
+    return csq_grouped
 
 
 def get_unique_variant_genes_and_consequences():
@@ -104,12 +127,15 @@ def get_unique_variant_genes_and_consequences():
     return csq_grouped
 
 
+csq = get_consequence_file(chrom='X')
+
+
 def get_regenie_path(pheno, chrom, test='additive', outlier_type=None):
     pheno = pheno.replace('_','-')
     if outlier_type is None:
         return f'/Users/nbaya/gms/lindgren/ukb_wes/ukb_wes_450k_gwas/data/regenie/qced_biomarkers/eur/both_sexes/step2_{test}_chr{chrom}_{pheno}_qced.regenie.gz'
 
-def read_saige_gwas(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes'):
+def read_saige_gwas(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes', assoc='variant_test'):
 
     df_list = []
 
@@ -120,10 +146,13 @@ def read_saige_gwas(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes'
                 pheno=pheno, 
                 sex=sex, 
                 pop=pop,
-                assoc='variant',
+                assoc=assoc,
                 chrom=chrom,
             )
             df_tmp = pd.read_csv(path, sep='\t', compression='gzip')
+            if chrom=='X':
+                # Needed for merging with consequence annotation file
+                df_tmp['MarkerID'] = 'chr'+df_tmp[['CHR','POS','Allele2','Allele1']].apply(lambda row: ':'.join(row.values.astype(str)), axis=1)        
             df_list.append(df_tmp)
         except:
             print(path)
@@ -148,12 +177,18 @@ def read_saige_gwas(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes'
     
     return df
 
-def read_saige_gene_assoc(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes'):
+def read_saige_gene_assoc(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes', assoc='set_test'):
 
     df_list = []
 
     for chrom in list(range(1,23))+['X']:
-        path = get_saige_results_path(pheno=pheno, phenotype_group=phenotype_group, chrom=chrom, sex=sex, assoc='set')
+        path = get_saige_results_path(
+            pheno=pheno, 
+            phenotype_group=phenotype_group, 
+            chrom=chrom, 
+            sex=sex, 
+            assoc=assoc
+        )
         try:
             df_tmp = pd.read_csv(path, sep='\t')
             df_tmp['CHR'] = str(chrom)

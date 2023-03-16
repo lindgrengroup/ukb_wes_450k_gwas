@@ -5,7 +5,9 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 from adjustText import adjust_text
 
-from ukb_wes_450k_gwas.utils import DATA_DIR
+from ukb_wes_450k_gwas.utils import DATA_DIR, read_saige_gwas, obesity_phenotype_to_label_dict, LOCAL_PLOTS_DIR
+
+COLORS = plt.rcParams['axes.prop_cycle'].by_key()['color']
 # -
 # def old1_get_saige_path(pheno, chrom, sex='both_sexes', assoc='variant'):
 #     if assoc=='variant':
@@ -216,13 +218,16 @@ def plot_manhattan(df, log_yscale=False, title='', ax=None, scatter_kwargs={},
     
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 8))
-        
+    if 'chrom' in df.columns:
+        chrom_field = 'chrom'
+    else:
+        chrom_field = 'CHR'
     for i, chrom in enumerate(range(1, 24)):
         max_pos=0
         
         if chrom==23: chrom='X'
 #         try:
-        gwas = df[df.CHR.astype(str)==str(chrom)]
+        gwas = df[df[chrom_field].astype(str)==str(chrom)]
     
             #         print(f'Variants with defined p-values chr{chrom}: {gwas.nlog10pval.notna().sum()}')
         try:
@@ -270,6 +275,39 @@ def plot_manhattan(df, log_yscale=False, title='', ax=None, scatter_kwargs={},
     if log_yscale:
         ax.set_yscale('symlog', linthresh=5)
         ax.set_ylim([0, ymax**1.05])
+
+def plot_multiple_manhattan(df_dict, phenotype_group, pop, sex, pheno_list, ncols = 2, nrows=5):
+    fig, axs = plt.subplots(figsize=(6*1.2*ncols,4*1.2*nrows), dpi=300, nrows=nrows, ncols=ncols)
+
+    for i, pheno in enumerate(pheno_list):
+        ax = axs[i//2][i%2]
+        gwas_id = f'{pheno}-{sex}'
+#         try:
+        print(gwas_id)
+        if gwas_id not in df_dict:
+            df_dict[gwas_id] = read_saige_gwas(df_dict=df_dict, pheno=pheno, phenotype_group=phenotype_group, pop=pop, sex=sex)
+        df = df_dict[gwas_id]
+        plot_manhattan(
+            df=df, 
+            ax=ax,
+            title=f'{obesity_phenotype_to_label_dict[pheno]}, sex={sex}\n'+f'(n={int(df.N.mean())})',
+            scatter_kwargs={'s':5},
+            highlight_coding_nonsynonymous=True
+        )
+        n_non_null = (df['p.value'].notna()).sum()
+        print(f'* Variants with non-null p-values: {n_non_null}')
+        print(f'* Variants passing GWS (pval<5e-8): {(df.nlog10pval > -np.log10(5e-8)).sum()}')
+        # Nominal Bonferroni-corrected significance: (pval<0.05/[count of variants with non-null p-values])
+#         nominal_bonf_thresh = 0.05/n_non_null
+#         print(f'* Variants passing nominal Bonf.-corrected sig. (pval<{nominal_bonf_thresh:.3e}): {(df_dict[pheno].nlog10pval > -np.log10(nominal_bonf_thresh)).sum()}')
+        print()
+#         except:
+#             print(f'Failed {pheno}')
+    plt.tight_layout()
+
+    fname=f'manhattan_plot.{"-".join(sorted(pheno_list))}.png'
+    plt.savefig(f'{LOCAL_PLOTS_DIR}/{fname}', dpi=300)
+
 
 def plot_maf_vs_effect(df, log_yscale=False, title='', ax=None, scatter_kwargs={}, 
     n_most_sig_variants_to_label_gene=0, n_highest_effect_variants_to_label_gene=0,clump_variants_into_loci=False,
@@ -344,41 +382,94 @@ def plot_maf_vs_effect(df, log_yscale=False, title='', ax=None, scatter_kwargs={
         )
 
 
-def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log_yscale=False, title=''):
-    df = df.merge(csq, on=['Region', 'CHR'], how='left')
+# +
+def get_genes_with_pos(csq):
+    csq = csq.copy()
+    if 'gene_id' not in csq.columns:
+        csq = csq.rename(columns={'Region':'gene_id'})
+    csq['position'] = csq['MarkerID'].str.split(':', expand=True)[1].astype(int)
+    genes_with_pos = csq[['gene_id','position']].groupby('gene_id').mean().reset_index()
+    return genes_with_pos
+
+def add_gene_position(df, genes_with_pos):
+    if 'position' not in df.columns:
+        if 'gene_id' not in genes_with_pos.columns:
+            genes_with_pos = genes_with_pos.rename(columns={'Region':'gene_id'})
+        df = df.merge(genes_with_pos[['gene_id','position']], on=['gene_id'], how='left')
+    
+    return df
+
+
+# -
+
+def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log_yscale=False, title='', \
+    ax=None, n_top_genes_to_label=0, chrom_padding=5e7):
     
     start_bp = 0
     mid = []
     chrom_list = []
-    plt.figure(figsize=(12, 8))
+    plot_df_list = []
+
+    if ax is None:
+        print('creating subplots')
+        fig, ax = plt.subplots(dpi=300)
+        
     for i, chrom in enumerate(range(1, 23)):
         if chrom==23: chrom='X'
-            
+
         gwas = df[df.CHR.astype(str)==str(chrom)]
-#         print(f'Missing gene position: {gwas.position.isna().sum()}')
-        
-        plt.scatter(
-            gwas['position']+start_bp,
+        if len(gwas)==0:
+            continue
+        gwas['plot_position'] = gwas['position']+start_bp
+    #         print(f'Missing gene position: {gwas.position.isna().sum()}')
+
+        ax.scatter(
+            gwas['plot_position'],
             gwas[nlog10pval_field], 
             c=COLORS[i % 2]
         )
+        plot_df_list.append(gwas)
         mid.append(start_bp+(max(gwas['position']))/2)
         start_bp += max(gwas['position'])
-        start_bp += 5e7
+        start_bp += chrom_padding # Space between chromosomes
         chrom_list.append(chrom)
 
-    left, right = plt.xlim()
-    plt.plot([left, right], [-np.log10(0.05/20e3)]*2, 'k--') # 20k genes
-#     plt.plot([left, right], [-np.log10(0.05/df['p.value'].notna().sum())]*2, 'k--', alpha=0.2)
-    plt.xticks(mid, chrom_list)
-    plt.title(title)
-    plt.xlabel('Chromosome')
-    plt.ylabel('-log10(p)')
-    plt.xlim([left, right])
-    _, ymax = plt.ylim()
+    left, right = ax.get_xlim()
+    ax.plot([left, right], [-np.log10(0.05/20e3)]*2, 'k--') # 20k genes
+    #     plt.plot([left, right], [-np.log10(0.05/df['p.value'].notna().sum())]*2, 'k--', alpha=0.2)
+    ax.set_xticks(mid)
+    ax.set_xticklabels(chrom_list)
+    ax.set_title(title)
+    ax.set_xlabel('Chromosome')
+    ax.set_ylabel('-log10(p)')
+    ax.set_xlim([left, right])
+    _, ymax = ax.set_ylim()
+
+    # Add labels for most significant genes
+    plot_df = pd.concat(plot_df_list, axis=0)
+    plot_df = plot_df.sort_values(by=nlog10pval_field, ascending=False)
+    gene_labels=[]
+    if n_top_genes_to_label>0:
+        gene_labels += add_labels(
+            x=plot_df['plot_position'].values[:n_top_genes_to_label],
+            y=plot_df[nlog10pval_field].values[:n_top_genes_to_label],
+            labels= plot_df.sort_values(by=nlog10pval_field, ascending=False)['gene_symbol'].values[:n_top_genes_to_label], 
+            ax=ax, 
+        )
+
+    if len(gene_labels)>0:
+        ymin, ymax = ax.get_ylim()
+        ax.set_ylim([ymin, ymax*1.2])
+        adjust_text(
+            texts=gene_labels, 
+            ax=ax, 
+            autoalign=True,
+            arrowprops=dict(arrowstyle='->', color='black')
+        )
+
     if log_yscale:
-        plt.yscale('symlog', linthresh=5)
-        plt.ylim([0, ymax**1.05])
+        ax.set_yscale('symlog', linthresh=5)
+        ax.set_ylim([0, ymax**1.05])
 
     return df
 
@@ -427,6 +518,14 @@ def plot_miami(df1, df2, log_yscale=False, title='', scatter_kwargs={}):
         plt.yscale('symlog', linthresh=5)
         plt.ylim([0, ymax**1.05])
 
+def plot_identity(ax):
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    ax.plot(*[[min([xmin, ymin]), min(xmax, ymax)]]*2, 'k--')
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+
+
 def plot_field_comparison(df1, df2, field='nlog10pval', xlabel='Pheno1', ylabel='Pheno2', title=None,
     merge_on=['CHR','position','MarkerID','Allele1','Allele2'], suffixes=('_1','_2'),
     ax=None, scatter_kwargs={}, plot_identity=True):
@@ -446,11 +545,7 @@ def plot_field_comparison(df1, df2, field='nlog10pval', xlabel='Pheno1', ylabel=
         **scatter_kwargs
     )
     if plot_identity:
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        ax.plot(*[[min([xmin, ymin]), min(xmax, ymax)]]*2, 'k--')
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
+        a
     
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

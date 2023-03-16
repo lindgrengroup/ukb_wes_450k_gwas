@@ -7,8 +7,8 @@
   "delayWorkspaceDestruction" : true,
   "inputSpec": [
     {
-      "name": "plink_bfile",
-      "class": "string",
+      "name": "bed",
+      "class": "file",
       "optional": false,
       "patterns": [
         "*"
@@ -16,8 +16,17 @@
       "help": ""
     },
     {
-      "name": "chrom",
-      "class": "string",
+      "name": "bim",
+      "class": "file",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
+      "name": "fam",
+      "class": "file",
       "optional": false,
       "patterns": [
         "*"
@@ -106,7 +115,7 @@
     "aws:eu-west-2": {
       "systemRequirements": {
         "*": {
-          "instanceType": "mem2_ssd1_v2_x8"
+          "instanceType": "mem2_ssd1_v2_x2"
         }
       }
     }

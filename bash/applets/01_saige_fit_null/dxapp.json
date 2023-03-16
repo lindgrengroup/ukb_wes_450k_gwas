@@ -1,14 +1,32 @@
 {
   "name": "01_saige_fit_null",
-  "title": "Saige Step 1 - Fit null model (single-variant)",
-  "summary": "Fit a null model for single-variant testing",
+  "title": "Saige Step 1 - Fit null model",
+  "summary": "Fit a null model for SAIGE",
   "dxapi": "1.0.0",
   "version": "0.0.1",
   "delayWorkspaceDestruction" : true,
   "inputSpec": [
     {
-      "name": "plink_for_vr_bfile",
-      "class": "string",
+      "name": "plink_for_vr_bed",
+      "class": "file",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
+      "name": "plink_for_vr_bim",
+      "class": "file",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
+      "name": "plink_for_vr_fam",
+      "class": "file",
       "optional": false,
       "patterns": [
         "*"
@@ -52,6 +70,33 @@
       "help": ""
     },
     {
+      "name": "trait_type",
+      "class": "string",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
+      "name": "covar_col_list",
+      "class": "string",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
+      "name": "qcovar_col_list",
+      "class": "string",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
       "name": "output_prefix",
       "class": "string",
       "optional": false,
@@ -87,19 +132,15 @@
         "hours": 10
       }
     },
+    "systemRequirements": {
+      "*": {
+        "instanceType": "mem3_ssd1_v2_x8"
+      }
+    },
     "interpreter": "bash",
     "file": "src/01_saige_fit_null.sh",
     "distribution": "Ubuntu",
     "release": "20.04",
     "version": "0"
-  },
-  "regionalOptions": {
-    "aws:eu-west-2": {
-      "systemRequirements": {
-        "*": {
-          "instanceType": "mem3_ssd1_v2_x4"
-        }
-      }
-    }
   }
 }

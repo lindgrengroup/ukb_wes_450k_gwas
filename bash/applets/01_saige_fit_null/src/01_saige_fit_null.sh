@@ -8,67 +8,59 @@ main() {
 
     ## Set up directories
     WD=$( pwd )
-    mkdir -p "plink_files"
+    # mkdir -p "plink_files"
     mkdir -p out/{model_file,variance_ratios}
 
-    # Directory path in docker
-    docker_dir="/mnt/home"
+    dx-mount-all-inputs --except pheno_file
     
-    ## Download input files
-    for suffix in {bed,bim,fam}; do
-      dx download "${plink_for_vr_bfile}.${suffix}" -o "plink_files/bfile.${suffix}"
-    done
-    dx download "$sparse_grm" -o "sparse_grm"
-    dx download "$sparse_grm_samples" -o "sparse_grm_samples"
-    
-    dx download "$pheno_file" -o "pheno_file.tsv.gz"
-    zcat "pheno_file.tsv.gz" > pheno_file
+    # Download phenotype file
+    # dx download "$pheno_file" -o "pheno_file.tsv.gz"
+    # zcat "pheno_file.tsv.gz" > pheno_file
+    dx download "$pheno_file" -o "pheno_file"
 
-    # Set up flags
-    if [[ "${output_prefix}" == *"male"* ]]; then
-      sex_covar_col_list=""
-      sex_qcovar_col_list=""
+    # Download SAIGE docker image from ukbb_meta/docker/
+    dx download file-GK53YGjJg8JX4yqg925zY7x5
+    docker load --input saige-1.1.6.3.tar.gz
+
+    # Get number of threads
+    n_threads=$(( $(nproc --all) - 1 ))
+
+    # Get inverse-normalize flag if trait_type=="quantitative"
+    if [ ${trait_type} == "quantitative" ]; then
+      trait_flags="--traitType=${trait_type}   --invNormalize=TRUE"
     else
-      sex_covar_col_list=",is_female,is_female_age,is_female_age2"
-      sex_qcovar_col_list=",is_female"
+      trait_flags="--traitType=${trait_type}"
     fi
-
-    sample_id_include_flag=""
-    if [[ "${output_prefix}" == *"genebass_eur"* ]]; then
-      dx download "wes_450k:/data/test_samples.tsv" -o "tmp-genebass_eur_ids.txt"
-      tail -n+2 "tmp-genebass_eur_ids.txt" > "genebass_eur_ids.txt"
-      sample_id_include_flag="--SampleIDIncludeFile=${docker_dir}/genebass_eur_ids.txt"
-    fi
-
-    # Download saige-1.1.6.1.tar.gz docker image from wes_450k/ukbb_meta/docker/
-    dx download file-GGzB25jJg8Jzf3gQGxY0Jy4X 
-    docker load --input saige-1.1.6.1.tar.gz
 
     ## Run script
     docker run \
+      -e HOME=${WD}  \
       -e pheno_col="${pheno_col}" \
+      -e trait_type="${trait_type}" \
+      -e inv_normalize_flag=${inv_normalize_flag} \
       -e output_prefix="${output_prefix}"  \
-      -v "${WD}":"${docker_dir}" \
-      wzhou88/saige:1.1.6.1 step1_fitNULLGLMM.R  \
-        --sparseGRMFile="${docker_dir}/sparse_grm" \
-        --sparseGRMSampleIDFile="${docker_dir}/sparse_grm_samples"  \
+      -e n_threads="${n_threads}" \
+      -v ${WD}/:$HOME/ \
+      wzhou88/saige:1.1.6.3 step1_fitNULLGLMM.R  \
+        --bedFile ${HOME}/in/plink_for_vr_bed/* \
+        --bimFile ${HOME}/in/plink_for_vr_bim/* \
+        --famFile ${HOME}/in/plink_for_vr_fam/* \
+        --sparseGRMFile ${HOME}/in/sparse_grm/* \
+        --sparseGRMSampleIDFile ${HOME}/in/sparse_grm_samples/*  \
         --useSparseGRMtoFitNULL=TRUE  \
-        --plinkFile="${docker_dir}/plink_files/bfile" \
-        --phenoFile="${docker_dir}/pheno_file" \
-        --skipVarianceRatioEstimation=FALSE \
-        --phenoCol="${pheno_col}" \
-        --covarColList="age,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10,pc11,pc12,pc13,pc14,pc15,pc16,pc17,pc18,pc19,pc20,pc21,age2,assessment_centre,sequencing_tranche${sex_covar_col_list}" \
-        --qCovarColList="assessment_centre,sequencing_tranche${sex_qcovar_col_list}"  \
+        --phenoFile ${HOME}/pheno_file \
+        --skipVarianceRatioEstimation FALSE \
+        --phenoCol "${pheno_col}" \
+        --covarColList "${covar_col_list}" \
+        --qCovarColList="${qcovar_col_list}"  \
         --sampleIDColinphenoFile="IID" \
-        --traitType="quantitative"        \
-        --outputPrefix="${docker_dir}/${output_prefix}" \
+        ${trait_flags} \
+        --outputPrefix="${HOME}/${output_prefix}" \
         --IsOverwriteVarianceRatioFile=TRUE \
-        --nThreads=3 \
-        --invNormalize=TRUE \
-        "${sample_id_include_flag}"
+        --nThreads=${n_threads}
 
     mv *.rda out/model_file/
-    mv *.varianceRatio.txt out/variance_ratios
+    mv *.varianceRatio.txt out/variance_ratios/
 
     dx-upload-all-outputs
 }

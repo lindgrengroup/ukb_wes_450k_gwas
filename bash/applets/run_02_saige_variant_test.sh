@@ -4,95 +4,124 @@ set -eu
 
 dx build 02_saige_variant_test --overwrite
 
-saige_data_dir="/saige_pipeline/data"
+readonly saige_data_dir="/saige_pipeline/data"
 
-sparse_grm="${saige_data_dir}/00_set_up/ukb_array.wes_450k_qc_pass_eur.pruned_relatednessCutoff_0.05_5000_randomMarkersUsed.sparseGRM.mtx"
-sparse_grm_samples="${saige_data_dir}/00_set_up/ukb_array.wes_450k_qc_pass_eur.pruned_relatednessCutoff_0.05_5000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+# [OPTION] population
+# - "eur"
+# - "allpop"
+readonly pop="eur"
 
-output_dir="${saige_data_dir}/02_saige_variant_test/"
-dx mkdir --parents "${output_dir}"
+# [OPTION] phenotype_group:
+# - "obesity"
+# - "qced_biomarkers"
+# - "parkinsons
+# - "qced_biomarkers_tail_status_quantile"
+# - "qced_biomarkers_tail_status_quantile_midfrac0.683"
+# - "smoking"
+# - "infertility"
+phenotype_group="qced_biomarkers_tail_status_quantile"
 
-# Pheno list
-# Obtained using (zcat ukb_obesity_phenos_and_covariates.tsv.gz | head -1 | cut -f31- | sed -e 's/\t/\n/g' | grep -v "invnorm" )
-obesity_phenos=(
-  body_mass_index_bmi
-  whr_adj_bmi
-  bmi_impedance
-  body_fat_percentage
-  visceral_adipose_tissue_volume_vat
-  abdominal_fat_ratio
-  gynoid_tissue_fatp
-  android_tissue_fatp
-  total_tissue_fatp
-  tissuefatp_androidgynoidratio
-)
+# [OPTION] catevr
+# ""        : --isCateVarianceRatio not used for SAIGE step 1
+# "-catevr" : --isCateVarianceRatio=TRUE for SAIGE step 1
+catevr=""
 
-brava_phenos=(
-  "30690-0.0"
-  "30780-0.0"
-  "30760-0.0"
-  "30870-0.0"
-  "30710-0.0"
-  "alanine_aminotransferase"
-  "30650-0.0"
-)
-
-# pheno_col="${phenos[2]}"
-pheno_col="${brava_phenos[5]}"
-
-# for i in {0,1,3,4}; do
-
-  # pheno_col="${obesity_phenos[$i]}"
-  # pheno_col="${brava_phenos[$i]}"
-
-  # for sex in {both,male,female}; do
-sex="both"
-
-if [ "${sex}" = "both" ]; then
-  fit_null_output_prefix="${pheno_col}"
-elif [ "${sex}" = "male" ] || [ "${sex}" = "female" ]; then
-  fit_null_output_prefix="${pheno_col}-${sex}"
+# [INPUT] Pheno list
+if [[ "${phenotype_group}" == *"qced_biomarkers"* ]]; then
+  # Always use the same list of biomarkers, with no suffixes related to tail status
+  phenos=( $( dx cat "${saige_data_dir}/phenotypes/phenotype_list.qced_biomarkers.txt" ) )
 else
+  phenos=( $( dx cat "${saige_data_dir}/phenotypes/phenotype_list.${phenotype_group}.txt" ) )
+fi
+readonly n_phenos=${#phenos[@]} # total number of phenotypes in list
+
+# [INPUT] Sparse GRM
+readonly sparse_grm="${saige_data_dir}/00_set_up/ukb_array.wes_450k_qc_pass_${pop}.pruned_relatednessCutoff_0.05_5000_randomMarkersUsed.sparseGRM.mtx"
+readonly sparse_grm_samples="${sparse_grm}.sampleIDs.txt"
+
+# [OPTION] sex 
+# Which sex to run SAIGE on
+# - "both_sexes"
+# - "female"
+# - "male"
+# for sex in {male,female}; do
+sex="both_sexes"
+
+# Check if sex is valid (i.e. one of "both_sexes", "female", "male")
+if [[ ! " ( both_sexes female male ) " =~ " ${sex} " ]]; then
   echo "Invalid sex: ${sex}" && exit 1
 fi
 
-echo "${fit_null_output_prefix}"
+# [INPUT] SAIGE null model file directory
+fit_null_output_prefix="${saige_data_dir}/01_fit_null${catevr}/${phenotype_group}/${pop}/${sex}"
 
-model_file="/saige_pipeline/data/01_fit_null/${fit_null_output_prefix}.rda"
-variance_ratios="/saige_pipeline/data/01_fit_null/${fit_null_output_prefix}.varianceRatio.txt"
+# [OUTPUT] Output directory
+output_dir="${saige_data_dir}/02_saige_variant_test${catevr}/${phenotype_group}/${pop}/${sex}/"
+dx mkdir --parents "${output_dir}"
 
-for chrom in {14..16}; do
+# [OPTION] tail_type:
+# Only relevant to tail status phenotype group, otherwise leave as empty string
+# - "" (empty string)
+# - "_qced_is_{lower,upper,either}_tail_quantile{0.01,0.05,0.1}"
+# for quantile in {0.01,0.1}; do 
 
-  if [ ${chrom} -eq 23 ]; then
-    chrom="X"
-  fi
+for tail in {lower,upper}; do
+# tail="lower"
+  tail_type="_qced_is_${tail}_tail_quantile0.01"
+    #   tail_type=""
+  # tail_type=""
 
-  plink_bfile="wes_450k:/data/05_export_to_plink/ukb_wes_450k.qced.chr${chrom}"
+  for pheno_idx in {0..32}; do
 
-  output_prefix="saige_variant_test.${fit_null_output_prefix}.chr${chrom}" 
-  
-  results_file="${output_dir}/${output_prefix}.tsv"
+    pheno_col="${phenos[$pheno_idx]}${tail_type}"  
+    gwas_id="${pheno_col}-${pop}-${sex}"
 
-  if [ $( dx ls -l ${results_file} 2> /dev/null | wc -l  ) -eq 0 ]; then
-    echo "running chr${chrom}"
-    dx run 02_saige_variant_test \
-      -iplink_bfile="${plink_bfile}" \
-      -ichrom="${chrom}" \
-      -isparse_grm="${sparse_grm}" \
-      -isparse_grm_samples="${sparse_grm_samples}" \
-      -imodel_file="${model_file}" \
-      -ivariance_ratios="${variance_ratios}" \
-      -ioutput_prefix="${output_prefix}" \
-      --name="02_saige_variant_test-${fit_null_output_prefix}-c${chrom}" \
-      --destination "${output_dir}" \
-      --brief \
-      --priority="low" \
-      -y
-  fi
+    # [INPUT] SAIGE null model files
+    model_file="${fit_null_output_prefix}/${gwas_id}.rda"
+    variance_ratios="${fit_null_output_prefix}/${gwas_id}.varianceRatio.txt"
+    
+    echo "${gwas_id}"
 
-  sleep 2
+    for chrom in {21..21}; do
+
+      if [ ${chrom} -eq 23 ]; then
+        chrom="X"
+      fi
+
+      # [INPUT] UKB WES 450k QCed PLINK data
+      plink_bfile="/data/05_export_to_plink/ukb_wes_450k.qced.chr${chrom}"
+
+      # [OUTPUT] Output file names
+      output_prefix="saige_variant_test${catevr}.${gwas_id}.chr${chrom}" 
+      results_file="${output_dir}/${output_prefix}.tsv.gz"
+
+      # Check if output file exists
+      if [ $( dx ls -l ${results_file} 2> /dev/null | wc -l  ) -eq 0 ]; then
+
+        echo "Starting chr${chrom}"
+
+        dx run 02_saige_variant_test \
+          -ibed="${plink_bfile}.bed" \
+          -ibim="${plink_bfile}.bim" \
+          -ifam="${plink_bfile}.fam" \
+          -isparse_grm="${sparse_grm}" \
+          -isparse_grm_samples="${sparse_grm_samples}" \
+          -imodel_file="${model_file}" \
+          -ivariance_ratios="${variance_ratios}" \
+          -ioutput_prefix="${output_prefix}" \
+          --name="02_saige_variant_test-${gwas_id}-c${chrom}" \
+          --destination "${output_dir}" \
+          --brief \
+          --priority="low" \
+          -y
+        
+        sleep 0.5 
+
+      fi
+       
+    done
+    
+  done
+
 done
-
   # done
-
-# done

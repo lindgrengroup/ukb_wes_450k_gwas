@@ -2,3 +2,4 @@
 *.wdl
 /data
 /logs
+/python/ukb_wes_450k_gwas/*ipynb

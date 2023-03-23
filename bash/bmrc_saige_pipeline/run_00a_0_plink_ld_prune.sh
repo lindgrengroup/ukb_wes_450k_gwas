@@ -23,8 +23,7 @@ WD="/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas"
 # Population to use 
 #   Options: 
 #   - 'eur': Genetically European
-#   - 'allpop': Individuals from all populations who pass QC (i.e. no population filter)
-readonly pop=$1
+readonly pop="eur"
 
 # [OPTION] chrom
 # Chromosome to run
@@ -39,31 +38,15 @@ fi
 readonly bed="/well/lindgren/UKBIOBANK/DATA/CALLS/ukb_cal_chr${chrom}_v2.bed"
 readonly bim="/well/lindgren/UKBIOBANK/DATA/CALLS/ukb_snp_chr${chrom}_v2.bim"
 readonly fam="/well/lindgren/UKBIOBANK/DATA/SAMPLE_FAM/ukb11867_cal_chr1_v2_s488363.fam"
-readonly samples_w_superpop="${WD}/data/00_set_up/ukb_wes_450k.qced.sample_list_w_superpops.tsv"
+readonly samples_w_superpop="${WD}/data/00_set_up/ukb_wes_450k.qced.subset_to_impv3.sample_list_w_superpops.tsv"
 
 ## [OUTPUT]
 readonly out_dir="${WD}/data/00_set_up"
-readonly out="${out_dir}/ukb_array.wes_450k_qc_pass_${pop}.pruned.chr${chrom}"
+readonly out="${out_dir}/ukb_array.wes_450k_qc_pass_${pop}.subset_to_impv3.pruned.chr${chrom}"
 
 mkdir -p ${out_dir}
 
-if [[ "${pop}" == "allpop" ]]; then
-  plink2 \
-    --bed "${bed}" \
-    --bim "${bim}" \
-    --fam "${fam}" \
-    --indep-pairwise 50 5 0.05 \
-    --out "${out}"
-
-  # Extract set of pruned variants and export to bfile
-  plink2 \
-    --bed "${bed}" \
-    --bim "${bim}" \
-    --fam "${fam}" \
-    --make-bed \
-    --out "${out}"
-
-elif [[ "${pop}" == "eur" ]]; then
+if [[ "${pop}" == "eur" ]]; then
   # Subset to a genetic ancestry
   # LD prune on European subset of samples passing WES 450k QC
   plink2 \

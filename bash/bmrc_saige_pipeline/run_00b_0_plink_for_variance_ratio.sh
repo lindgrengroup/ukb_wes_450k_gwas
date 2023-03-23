@@ -42,7 +42,8 @@ fi
 readonly bed="/well/lindgren/UKBIOBANK/DATA/CALLS/ukb_cal_chr${chrom}_v2.bed"
 readonly bim="/well/lindgren/UKBIOBANK/DATA/CALLS/ukb_snp_chr${chrom}_v2.bim"
 readonly fam="/well/lindgren/UKBIOBANK/DATA/SAMPLE_FAM/ukb11867_cal_chr1_v2_s488363.fam"
-readonly samples_w_superpop="${WD}/data/00_set_up/ukb_wes_450k.qced.sample_list_w_superpops.tsv"
+# readonly samples_w_superpop="${WD}/data/00_set_up/ukb_wes_450k.qced.sample_list_w_superpops.tsv" # Could also be used, but for simplicity we use the same samples as in the pruning step.
+readonly samples_w_superpop="${WD}/data/00_set_up/ukb_wes_450k.qced.subset_to_impv3.sample_list_w_superpops.tsv"
 
 
 # [OUTPUT]
@@ -70,19 +71,25 @@ elif [[ "${pop}" == "eur" ]]; then
     --out "${out}"
 fi
 
-#2. Randomly extract IDs for markers falling in the two MAC categories:
-# * 1,000 markers with 10 <= MAC < 20
-# * 1,000 markers with MAC >= 20
-cat <(
-  tail -n +2 "${out}.acount" \
-  | awk '(($6-$5) < 20 && ($6-$5) >= 10) || ($5 < 20 && $5 >= 10) {print $2}' \
-  | shuf -n 1000 ) \
-<( \
-  tail -n +2 "${out}.acount" \
+# DEPRECATED (for WES)
+##2. Randomly extract IDs for markers falling in the two MAC categories:
+## * 1,000 markers with 10 <= MAC < 20
+## * 1,000 markers with MAC >= 20
+#cat <(
+#  tail -n +2 "${out}.acount" \
+#  | awk '(($6-$5) < 20 && ($6-$5) >= 10) || ($5 < 20 && $5 >= 10) {print $2}' \
+#  | shuf -n 1000 ) \
+#<( \
+#  tail -n +2 "${out}.acount" \
+#  | awk ' $5 >= 20 && ($6-$5)>= 20 {print $2}' \
+#  | shuf -n 1000 \
+#  ) > "${out}.markerid.list"
+
+# 2. Randomly extract IDs for 2000 markers with MAC>=20
+tail -n +2 "${out}.acount" \
   | awk ' $5 >= 20 && ($6-$5)>= 20 {print $2}' \
   | shuf -n 1000 \
-  ) > "${out}.markerid.list"
-
+  > "${out}.markerid.list"
 
 #3. Extract markers from the large PLINK file
 if [[ "${pop}" == "allpop" ]]; then 

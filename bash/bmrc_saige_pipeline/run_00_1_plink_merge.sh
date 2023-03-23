@@ -23,12 +23,13 @@ WD="/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas"
 #   Options:
 #   - 'eur': Genetically European
 #   - 'allpop': Individuals from all populations who pass QC (i.e. no population filter)
-readonly pop=$1
+readonly pop="eur"
 
 # [OPTION] dataset
-# - 'pruned'
+# - 'pruned' # DEPRECATED (not subset to imputed data)
+# - 'subset_to_impv3.pruned'
 # - 'for_vr'
-readonly dataset=$2 
+readonly dataset="for_vr" 
 
 # [OPTION] include_chrX
 # - true
@@ -50,17 +51,20 @@ readonly merged_bfile="${out_dir}/ukb_array.wes_450k_qc_pass_${pop}.${dataset}"
 
 mkdir -p ${out_dir}
 
+merge_list="/tmp/merge_list"
+rm -f ${merge_list}
+
 for chrom in {1..22}; do
-    get_bfile ${dataset} ${chrom} >> merge_list.txt
+    get_bfile ${dataset} ${chrom} >> ${merge_list}
 done
 
 if ${include_chrX}; then
-    get_bfile ${dataset} "X" >> merge_list.txt
+    get_bfile ${dataset} "X" >> ${merge_list}
 fi
 
 plink \
-  --merge-list merge_list.txt \
+  --merge-list ${merge_list} \
   --make-bed \
   --out "${merged_bfile}"
 
-rm merge_list.tx
+rm -f ${merge_list}

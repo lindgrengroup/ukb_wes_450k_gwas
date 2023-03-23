@@ -3,3 +3,4 @@
 /data
 /logs
 /python/ukb_wes_450k_gwas/*ipynb
+/python/ukb_wes_450k_gwas/__pycache__/

@@ -12,16 +12,23 @@ script_dnax="/saige_pipeline/scripts/${script}"
 source "/Users/nbaya/gms/lindgren/ukb_wes/ukb_wes_450k_qc/bash/dnax_utils.sh"
 upload_file "${script_local}" "${script_dnax}"
 
-# Options: pruned, for_vr
-# dataset_to_merge="pruned"
-dataset_to_merge="for_vr"
+## OPTIONS
+# dataset_to_merge:
+# - 'pruned'
+# - 'for_vr'
+readonly dataset_to_merge="for_vr"
 
-icmd="bash ${script} ${dataset_to_merge}"
+# pop:
+# - 'allpop'
+# - 'eur'
+readonly pop='allpop'
+
+echo "Running PLINK merge on: ${pop}-${dataset_to_merge}"
 
 dx run swiss-army-knife \
 	-iin="/saige_pipeline/scripts/${script}" \
-	-icmd="${icmd}" \
-	--name="plink_merge_${dataset_to_merge}" \
+	-icmd="bash ${script} ${pop} ${dataset_to_merge}" \
+	--name="plink_merge_${pop}_${dataset_to_merge}" \
 	--instance-type "mem1_ssd1_v2_x8" \
 	--priority="low" \
 	--destination="/saige_pipeline/data/00_set_up" \

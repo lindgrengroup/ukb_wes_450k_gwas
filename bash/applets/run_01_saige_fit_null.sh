@@ -102,7 +102,7 @@ for sex in {"both_sexes","female","male"}; do
   tail_type=""
   
   # NOTE: pheno_idx is 0-indexed
-  for pheno_idx in {6..6}; do
+  for pheno_idx in `seq 0 ${n_phenos}; do
   
     pheno_col="${phenos[$pheno_idx]}${tail_type}"
   

@@ -5,8 +5,8 @@
 
 set -e # Stop job if any command fails
 
-bfile="ukb_array.wes_450k_qc_pass_eur.pruned"
-out="ukb_array.wes_450k_qc_pass_eur.pruned"
+readonly bfile=$1
+readonly out=$2
 
 createSparseGRM.R       \
     --plinkFile="${bfile}" \

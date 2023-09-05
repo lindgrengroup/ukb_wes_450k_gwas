@@ -19,7 +19,6 @@ main() {
       awk '{
         
         varid=$1":"$4":"$6":"$5  
-
         print $1,varid,$3,$4,$5,$6
 
       }' "${WD}/bfile.bim" > "${WD}/bfile.bim-tmp"
@@ -32,6 +31,7 @@ main() {
 
     dx download "${group_file}" -o "group_file.gz"
     gunzip -c group_file.gz > "${WD}/group_file.txt"
+
 
     # NOTE: Started using v1.1.9 on 2023-07-18. SAIGE v1.1.8 is the first version that works correctly for case-control traits. 
     # Previously I was using v1.1.6.3 (and before that, v1.1.6.1)
@@ -73,4 +73,3 @@ main() {
 
     dx-upload-all-outputs
 }
-

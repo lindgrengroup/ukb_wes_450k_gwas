@@ -69,7 +69,7 @@ dx mkdir --parents "${output_dir}"
     # tail_type="_qced_is_${tail}_tail_quantile${quantile}_midfrac0.683"
 tail_type=""
 
-for pheno_idx in {2..2}; do
+for pheno_idx in `seq 0 ${n_phenos}`; do
 
   pheno_col="${phenos[$pheno_idx]}${tail_type}" 
   gwas_id="${pheno_col}-${pop}-${sex}"
@@ -105,7 +105,7 @@ for pheno_idx in {2..2}; do
     group_file="/ukb_wes_450k_qc/data/annotations/brava_v2_csq_w_other_missense/ukb_wes_450k.qced.brava.v2.saige_group.chr${chrom}.worst_csq_by_gene_canonical.txt.gz" # Current Default
 
     # [OUTPUT] Output files
-    output_prefix="nostream-saige_set_test${catevr}.${gwas_id}.chr${chrom}"
+    output_prefix="saige_set_test${catevr}.${gwas_id}.chr${chrom}"
     results_file="${output_dir}/${output_prefix}.tsv.gz"
 
     if [ $( dx ls -l ${results_file} 2> /dev/null | wc -l  ) -eq 0 ]; then
@@ -135,4 +135,3 @@ done
 
 # done
 # done
-

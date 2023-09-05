@@ -6,6 +6,7 @@ from os.path import isfile
 from datetime import datetime
 from os.path import getmtime
 
+
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # +
@@ -44,6 +45,7 @@ obesity_phenotype_to_label_dict = {
     'tissuefatp_androidgynoidratio': 'Android-gynoid fat percentage ratio'
 }
 # -
+
 
 SET_TEST_GROUPS = [
     'pLoF',
@@ -86,11 +88,11 @@ def get_phenotype_list(phenotype_group):
     )
     return df.values.flatten()
 
+  
 def get_obesity_phenotype_list():
     """Used for compatibility of old scripts
     """
     return get_phenotype_list(phenotype_group='obesity')
-
 
 
 def get_saige_results_path(pheno, chrom, phenotype_group='qced_biomarkers',
@@ -99,7 +101,6 @@ def get_saige_results_path(pheno, chrom, phenotype_group='qced_biomarkers',
     fname = f'saige_{assoc}.{pheno}-{pop}-{sex}{"-imputed_v3" if dataset=="imputed" else ""}.chr{chrom}.tsv.gz'
     return f'{dir_path}/{fname}'
 
-# +
 
 def get_old_consequence_path(chrom):
     return f'{GWAS_DATA_DIR}/annotations/old-wes_450k/ukb_wes_450k.qced.chr{chrom}.worst_csq_by_gene_canonical.txt.gz'
@@ -128,8 +129,6 @@ def get_consequence_annotation_path(chrom, version):
     return f'{path_dir}/ukb_wes_450k.{qc_version}.brava.v{version}{chrom_str}.worst_csq_by_gene_canonical.{file_type}.gz'
 
 
-# -
-
 def get_consequence_file(chrom, version):
     csq = pd.read_csv(
         get_consequence_annotation_path(chrom=chrom, version=version), 
@@ -147,6 +146,7 @@ def get_consequence_file(chrom, version):
     
     return csq
 
+  
 def get_all_consequence_files(version):
     csq_df_list = [get_consequence_file(chrom=chrom, version=version)
                    for chrom in list(range(1, 23))+['X']]
@@ -263,6 +263,7 @@ def get_gene_id_to_symbol_map(df_dict, version=6):
     
     return gene_id_to_symbol_dict
 
+  
 def get_regenie_path(pheno, chrom, test='additive', outlier_type=None):
     pheno = pheno.replace('_', '-')
     if outlier_type is None:
@@ -303,11 +304,13 @@ def standard_variant_processing(df_dict, df, dataset, remove_ur=False):
     
     return df
 
+  
 def get_sample_size(n_sample_col):
     n_samples = n_sample_col.unique()
     assert len(n_samples)==1
     return n_samples[0]
 
+  
 def read_saige_gwas(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes', assoc='variant_test', dataset='wes'):
 
     df_list = []
@@ -340,7 +343,7 @@ def read_saige_gwas(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes'
 
     return df
 
-
+  
 def read_saige_gene_assoc(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes', assoc='set_test'):
 
     df_list = []
@@ -405,7 +408,7 @@ def read_genebass_results(pheno, assoc='variant'):
 
     return gb
 
-
+  
 def is_coding_nonsynonymous(df):
     return (
         df.consequence_category.notna()
@@ -413,7 +416,6 @@ def is_coding_nonsynonymous(df):
     )
 
 
-# +
 def get_imputed_v3_hwe_pval_path(chrom):
     return f'{GWAS_DATA_DIR}/annotations/imputed_v3/ukb_impv3.subset_to_wes_450k_qc_pass_eur.chr{chrom}.hardy.gz'
 
@@ -479,18 +481,22 @@ def get_heterogeneity_gwas(gwas1, gwas2, suffixes=['_f', '_m'], heterogeneity_su
 
     return merge
 
+  
 def get_brava_group_test_path(chrom, phenotype_group='obesity', pop='EUR', pheno='bmi'):
     if pheno=='body_mass_index_bmi':
         pheno='BMI'
     return f'{GWAS_DATA_DIR}/02_saige_all_test-brava/{phenotype_group}/{pop.lower()}/both_sexes/chr{chrom}_{pheno}_{pop.upper()}.txt.gz'
 
+  
 def get_brava_variant_test_path(chrom, phenotype_group='obesity', pop='EUR', pheno='bmi'):
     if pheno=='body_mass_index_bmi':
         pheno='BMI'
     return f'{GWAS_DATA_DIR}/02_saige_all_test-brava/{phenotype_group}/{pop.lower()}/both_sexes/chr{chrom}_{pheno}_{pop.upper()}.txt.singleAssoc.txt.gz'
 
+  
 def get_all_test_variant_assoc_path(pheno, chrom, phenotype_group, pop, sex):
     return f'{GWAS_DATA_DIR}/02_saige_all_test/{phenotype_group}/{pop}/{sex}/saige_all_test.{pheno}-{pop}-{sex}.chr{chrom}.tsv.singleAssoc.txt.gz'
+    
     
 def load_saige_all_test_variant_assoc(df_dict, gwas_id, phenotype_group='obesity'):
     all_test_variant_assoc_id = f'{gwas_id}-all_test_variants'
@@ -528,6 +534,7 @@ def load_saige_all_test_variant_assoc(df_dict, gwas_id, phenotype_group='obesity
     
     return df_dict[all_test_variant_assoc_id]
 
+  
 def load_finemapping_results(df_dict, gwas_id):
     master_id = f'{gwas_id}-master'
     imputed_gwas_id = f'{gwas_id}-imputed'
@@ -579,6 +586,7 @@ def load_imputed_results(df_dict, phenotype_group, gwas_id, force_read=False):
         
     return df_dict, df_dict[imputed_gwas_id]
     
+    
 def load_wes_results(df_dict, gwas_id, phenotype_group):
     pheno, pop, sex = gwas_id.split('-')
     wes_gwas_id = f'{gwas_id}-wes'
@@ -595,6 +603,7 @@ def load_wes_results(df_dict, gwas_id, phenotype_group):
 
     return df_dict, df_dict[wes_gwas_id]
 
+  
 def prepare_sexdiff(df_dict, gwas_id, phenotype_group, group_test='pLoF;damaging_missense', max_maf=0.01):
     pheno, pop, sex = gwas_id.split('-')
     from association_processing.finemap_utils import read_finemap_output # put inside this function to avoid circular import
@@ -688,9 +697,11 @@ def prepare_sexdiff(df_dict, gwas_id, phenotype_group, group_test='pLoF;damaging
 
     return df_dict
 
+  
 def get_significant_variant_test_results_path(phenotype_group, suffix):
     return f'{GWAS_DATA_DIR}/significant_results/ukb_wes_450k.{phenotype_group}.varianttest.{suffix}.tsv.gz'
 
+  
 def write_significant_variant_test_results(df, phenotype_group, suffix, overwrite=False):
     path = get_significant_variant_test_results_path(phenotype_group=phenotype_group, suffix=suffix)
     
@@ -717,6 +728,7 @@ def get_significant_set_test_results_path(phenotype_group, group_test, max_maf, 
 
     return f'{GWAS_DATA_DIR}/significant_results/ukb_wes_450k.{phenotype_group}.grouptest.{suffix}.tsv.gz'
 
+  
 def write_significant_set_test_results(df, phenotype_group, group_test, max_maf, suffix=None, overwrite=False):
     path = get_significant_set_test_results_path(
         phenotype_group=phenotype_group, 
@@ -743,7 +755,8 @@ def write_significant_set_test_results(df, phenotype_group, group_test, max_maf,
         )
     else:
         print(f'File exists! (use overwrite=True to overwrite):\n{path}')
-    
+ 
+
 def remove_noncoding_synonymous(df):
     '''NOTE: Only use when working with data with incomplete annotations. 
     This is not a perfect solution.
@@ -763,6 +776,7 @@ def remove_noncoding_synonymous(df):
     
     return df
 
+  
 def annotate_with_significance_field(df, genomewide_sig, nominally_sig, remove_nonsig=False, pval_field='pval'):
     print("Annotating with 'significance' field")
     
@@ -861,7 +875,6 @@ def print_summary(df, phenos, assoc_test='variant'):
             print(f'* ({pip_lower}, {pip_upper}]: {n_bin} ({100*n_bin/n_total:.2f}%)')
             
 
-    
 # def get_duncan_transformed_burden_test_betas_maf(df_dict, gwas_id, phenotype_group, csq_categories_list, max_maf_list = [0.01,0.001,0.0001]):
     
 #     all_test_rare_variants = load_saige_all_test_variant_assoc(
@@ -909,6 +922,7 @@ def print_summary(df, phenos, assoc_test='variant'):
 #     )
     
 #     return grouped
+
 
 def get_duncan_transformed_burden_test_betas_maf(df_dict, gwas_id, phenotype_group, csq_categories_list, max_maf_list = [0.01,0.001,0.0001]):
     
@@ -1091,11 +1105,12 @@ def get_gene_aggregated_maf_and_burden_beta(df_dict, phenotype_group, gwas_id,
     
     return df_dict, df_dict[all_test_genes_gwas_id]
 
+  
 def get_annovar_path(chrom, suffix='variant'):
     assert suffix in {'variant','exonic_variant'}
-    
     return f'{GWAS_DATA_DIR}/annotations/imputed_v3/annovar/imputed_v3.chr{chrom}.{suffix}_function'
 
+  
 def get_annovar_result(chrom, suffix):
     assert suffix in {'variant','exonic_variant'}
     
@@ -1126,6 +1141,7 @@ def get_annovar_result(chrom, suffix):
     
     return annovar
 
+  
 def get_merged_annovar_result(chrom, rename_cols_to_match_saige=True):
     func = get_annovar_result(chrom=chrom, suffix='variant')
     csq = get_annovar_result(chrom=chrom, suffix='exonic_variant')
@@ -1149,6 +1165,7 @@ def get_merged_annovar_result(chrom, rename_cols_to_match_saige=True):
     
     return merged
 
+  
 def explode_gene_info(df):
 #     df = df.drop_duplicates(subset=['region_type','gene_info','chrom','position','Allele1','Allele2'])
 
@@ -1174,6 +1191,7 @@ def explode_gene_info(df):
     
     return df
 
+  
 def get_ensembl_gene_and_transcript_info(build='GRCh37'):
     assert build in {'GRCh37'}
     print(f'Using build {build}')

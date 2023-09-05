@@ -61,7 +61,7 @@ readonly n_phenos=${#phenos[@]} # total number of phenotypes in list
 # - "both_sexes"
 # - "female"
 # - "male"
-sex="both_sexes"
+sex="female"
 
 # Check if sex is valid (i.e. one of "both_sexes", "female", "male")
 if [[ ! " ( both_sexes female male ) " =~ " ${sex} " ]]; then
@@ -100,7 +100,6 @@ fi
 
 # NOTE: pheno_idx is 0-indexed
 pheno_idx="${SLURM_ARRAY_TASK_ID}"
-
 pheno_col="${phenos[$pheno_idx]}"
 
 # [OUTPUT] Output file names

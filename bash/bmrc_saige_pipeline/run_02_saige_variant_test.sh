@@ -10,7 +10,7 @@
 #SBATCH --output=logs/saige_step2_variant_test.log
 #SBATCH --error=logs/saige_step2_variant_test.errors.log
 #SBATCH --open-mode=append
-#SBATCH --partition=short
+#SBATCH --partition=long
 #SBATCH --cpus-per-task 4
 #SBATCH --requeue
 #SBATCH --array=1-23
@@ -52,8 +52,9 @@ readonly sparse_grm_samples="${sparse_grm}.sampleIDs.txt"
 # - "both_sexes"
 # - "female"
 # - "male"
-# for sex in {male,female}; do
-sex="both_sexes"
+#for sex in {female,male}; do
+#sex="both_sexes"
+sex="female"
 
 # Check if sex is valid (i.e. one of "both_sexes", "female", "male")
 if [[ ! " ( both_sexes female male ) " =~ " ${sex} " ]]; then
@@ -128,3 +129,4 @@ if [[ ! -s ${results_file_bmrc} ]]; then
 else
   print_update "${gwas_id} results exist! Skipping."
 fi
+

@@ -44,9 +44,9 @@ readonly sparse_grm_samples="${sparse_grm}.sampleIDs.txt"
 # - "both_sexes"
 # - "female"
 # - "male"
-#for sex in {female,male}; do
 sex="both_sexes"
 #sex='female'
+#for sex in {female,male}; do
 
 # Check if sex is valid (i.e. one of "both_sexes", "female", "male")
 if [[ ! " ( both_sexes female male ) " =~ " ${sex} " ]]; then
@@ -68,11 +68,10 @@ dx mkdir --parents "${output_dir}"
 
 # for tail in {lower,upper}; do
 # tail="lower"
-  # tail_type="_qced_is_${tail}_tail_quantile0.01"
-    #   tail_type=""
+# tail_type="_qced_is_${tail}_tail_quantile0.01"
 tail_type=""
 
-for pheno_idx in {6..6}; do
+for pheno_idx in `seq 0 ${n_phenos}`; do
 
   pheno_col="${phenos[$pheno_idx]}${tail_type}"  
   gwas_id="${pheno_col}-${pop}-${sex}"
@@ -127,4 +126,3 @@ done
 
   # done
 #done
-

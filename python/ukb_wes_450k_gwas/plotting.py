@@ -8,7 +8,7 @@ from adjustText import adjust_text
 from ukb_wes_450k_gwas.utils import read_saige_gwas, obesity_phenotype_to_label_dict, LOCAL_PLOTS_DIR, get_effect_size_of_minor_allele
 
 COLORS = plt.rcParams['axes.prop_cycle'].by_key()['color']
-# -
+
 # def old1_get_saige_path(pheno, chrom, sex='both_sexes', assoc='variant'):
 #     if assoc=='variant':
 #         return f'{DATA_DIR}/old-02_saige_variant_test/saige_variant_test.{pheno}{f"-{sex}" if sex != "both_sexes" else ""}.chr{chrom}.tsv'
@@ -20,7 +20,6 @@ COLORS = plt.rcParams['axes.prop_cycle'].by_key()['color']
 #     return f'{DATA_DIR}/02_saige_all_test/{sex}/saige_all_test.{pheno}{f"-{sex}" if sex != "both_sexes" else ""}.chr{chrom}.{assoc}_assoc.tsv'
 
 
-# +
 def get_is_coding_nonsynonymous(df):
     return (
         df.consequence_category.notna()
@@ -71,8 +70,6 @@ def clump_loci(df, clump_by='gene_symbol', sort_by='nlog10pval', ascending=False
     
     return pd.concat(loci_df_list, axis=0)
 
-
-# -
 
 def add_labels(x, y, labels, ax, highlight_labeled_points_kwargs={}, sig=False):
     labels_to_add = [
@@ -407,7 +404,7 @@ def add_gene_position(df, genes_with_pos):
 
 # -
 
-def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log_yscale=False, title='', \
+def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log_yscale=False, title='',
     ax=None, n_top_genes_to_label=0, chrom_padding=5e7, colors=COLORS):
     
     start_bp = 0
@@ -782,4 +779,3 @@ def plot_regeneron_trumpet(df_dict, phenotype_group, gwas_id, pip_thresh = 0.90,
     
 if __name__=='__main__':
     pass
-

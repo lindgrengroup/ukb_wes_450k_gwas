@@ -11,19 +11,35 @@ main() {
     # mkdir -p "plink_files"
     mkdir -p out/{model_file,variance_ratios}
 
-    dx-mount-all-inputs --except pheno_file
+    dx-mount-all-inputs
     
     # Download phenotype file
-    # dx download "$pheno_file" -o "pheno_file.tsv.gz"
-    # zcat "pheno_file.tsv.gz" > pheno_file
-    dx download "$pheno_file" -o "pheno_file"
+    zcat ${HOME}/in/pheno_file/* > "pheno_file"
 
-    # Download SAIGE docker image from ukbb_meta/docker/
-    dx download file-GK53YGjJg8JX4yqg925zY7x5
-    docker load --input saige-1.1.6.3.tar.gz
+    # NOTE: Started using v1.1.9 on 2023-07-18. SAIGE v1.1.8 is the first version that works correctly for case-control traits. 
+    # Previously I was using v1.1.6.3 (and before that, v1.1.6.1)
+    docker pull wzhou88/saige:1.1.9 
 
     # Get number of threads
     n_threads=$(( $(nproc --all) - 1 ))
+
+    if [ ${sex} == "female" ] || [ ${sex} == "male" ]; then
+      sex_specific_sample_list="sample_ids.txt"
+      dx download "project-GBvkP10Jg8Jpy18FPjPByv29:/saige_pipeline/data/covariates/ukb_sex.tsv.gz"
+      if [ ${sex} == "female" ]; then
+        is_female=1
+      else
+        is_female=0
+      fi
+
+      zcat ukb_sex.tsv.gz \
+      | awk -v is_female="${is_female}" '$2==is_female { print $1 }' > ${sex_specific_sample_list}
+      sample_id_include_flag="--SampleIDIncludeFile=${WD}/${sex_specific_sample_list}"
+    else
+      sample_id_include_flag=""
+    fi
+
+    head ${sex_specific_sample_list}
 
     # Get inverse-normalize flag if trait_type=="quantitative"
     if [ ${trait_type} == "quantitative" ]; then
@@ -49,11 +65,13 @@ main() {
         --sparseGRMSampleIDFile ${HOME}/in/sparse_grm_samples/*  \
         --useSparseGRMtoFitNULL=TRUE  \
         --phenoFile ${HOME}/pheno_file \
+        ${sample_id_include_flag} \
         --skipVarianceRatioEstimation FALSE \
         --phenoCol "${pheno_col}" \
         --covarColList "${covar_col_list}" \
         --qCovarColList="${qcovar_col_list}"  \
         --sampleIDColinphenoFile="IID" \
+        --isCateVarianceRatio=FALSE \
         ${trait_flags} \
         --outputPrefix="${HOME}/${output_prefix}" \
         --IsOverwriteVarianceRatioFile=TRUE \
@@ -64,3 +82,4 @@ main() {
 
     dx-upload-all-outputs
 }
+

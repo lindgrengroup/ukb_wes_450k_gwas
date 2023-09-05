@@ -111,13 +111,19 @@
     "release": "20.04",
     "version": "0"
   },
+  "access": {
+    "network": [
+      "*"
+    ]
+  },
   "regionalOptions": {
     "aws:eu-west-2": {
       "systemRequirements": {
         "*": {
-          "instanceType": "mem2_ssd1_v2_x2"
+          "instanceType": "mem3_ssd1_v2_x2"
         }
       }
     }
   }
 }
+

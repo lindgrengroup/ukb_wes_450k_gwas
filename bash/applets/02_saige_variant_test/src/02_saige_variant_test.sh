@@ -16,9 +16,9 @@ main() {
     dx download "$bim" -o "bfile.bim"
     sed -i 's/^chr//g' "${WD}/bfile.bim"
 
-    # Download saige-1.1.6.3.tar.gz docker image from ukbb_meta/docker/
-    dx download file-GK53YGjJg8JX4yqg925zY7x5
-    docker load --input saige-1.1.6.3.tar.gz
+    # NOTE: Started using v1.1.9 on 2023-07-18. SAIGE v1.1.8 is the first version that works correctly for case-control traits. 
+    # Previously I was using v1.1.6.3 (and before that, v1.1.6.1)
+    docker pull wzhou88/saige:1.1.9 
 
     ## Run script
     docker run \

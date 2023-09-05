@@ -17,12 +17,13 @@ readonly pop="eur"
 # - "parkinsons
 # - "qced_biomarkers_tail_status_quantile"
 # - "qced_biomarkers_tail_status_quantile_midfrac0.683"
+# - "hormone"
 readonly phenotype_group="obesity"
 
 # [OPTION] catevr
 # ""        : --isCateVarianceRatio not used for SAIGE step 1
 # "-catevr" : --isCateVarianceRatio=TRUE for SAIGE step 1
-catevr="-catevr"
+catevr=""
 
 # [INPUT] Sparse GRM
 sparse_grm="${saige_data_dir}/00_set_up/ukb_array.wes_450k_qc_pass_${pop}.pruned_relatednessCutoff_0.05_5000_randomMarkersUsed.sparseGRM.mtx"
@@ -42,8 +43,8 @@ n_phenos=${#phenos[@]} # total number of phenotypes in list
 # - "both_sexes"
 # - "female"
 # - "male"
-#for sex in {both_sexes,male,female}; do
-#for sex in {male,female}; do
+# for sex in {both_sexes,male,female}; do
+# for sex in {male,female}; do
 sex="both_sexes"
 
 # Check if sex is valid (i.e. one of "both_sexes", "female", "male")
@@ -68,7 +69,7 @@ dx mkdir --parents "${output_dir}"
     # tail_type="_qced_is_${tail}_tail_quantile${quantile}_midfrac0.683"
 tail_type=""
 
-for pheno_idx in {0..0}; do
+for pheno_idx in `seq 0 ${n_phenos}`; do
 
   pheno_col="${phenos[$pheno_idx]}${tail_type}" 
   gwas_id="${pheno_col}-${pop}-${sex}"
@@ -79,9 +80,7 @@ for pheno_idx in {0..0}; do
 
   echo "${gwas_id}"
 
-  for chrom in {6,13,23}; do
-
-  # chrom=14
+  for chrom in {1..23}; do
 
     if [ ${chrom} -eq 23 ]; then
       chrom="X"
@@ -90,9 +89,20 @@ for pheno_idx in {0..0}; do
     # [INPUT] UKB WES 450k QCed PLINK data
     plink_bfile="/data/05_export_to_plink/ukb_wes_450k.qced.chr${chrom}"
 
+    bed_size=$( dx ls -l "${plink_bfile}.bed" 2> /dev/null | cut -f5 -d' ' )
+    if (( $( echo "${bed_size} > 120" | bc ) )); then 
+      instance_type="mem3_ssd1_v2_x8"
+    elif (( $( echo "${bed_size} > 60" | bc ) )); then
+      instance_type="mem3_ssd1_v2_x4"
+    else
+      instance_type="mem3_ssd1_v2_x2"
+    fi
+
     # [INPUT] Gene consequence annotations
-    # group_file="/ukbb-meta/data/annotations/ukb_wes_450k.qced.chr${chrom}.worst_csq_by_gene_canonical.saige.txt.gz" # OLD ANNOTATIONS
-    group_file="/data/annotations/ukb_wes_450k.qced.brava.v1.saige_group.chr${chrom}.worst_csq_by_gene_canonical.txt.gz"
+    # group_file="/ukbb-meta/data/annotations/ukb_wes_450k.qced.chr${chrom}.worst_csq_by_gene_canonical.saige.txt.gz" # OLD ANNOTATIONS (no SpliceAI)
+    # group_file="/ukb_wes_450k_qc/data/annotations/ukb_wes_450k.qced.brava.v1.saige_group.chr${chrom}.worst_csq_by_gene_canonical.txt.gz" # OLD ANNOTATION (SpliceAI damaging missense not merged)
+    # group_file="/ukb_wes_450k_qc/data/annotations/ukb_wes_450k.qced.brava.v2.saige_group.chr${chrom}.worst_csq_by_gene_canonical.txt.gz" # Does not include "other_missense" variants
+    group_file="/ukb_wes_450k_qc/data/annotations/brava_v2_csq_w_other_missense/ukb_wes_450k.qced.brava.v2.saige_group.chr${chrom}.worst_csq_by_gene_canonical.txt.gz" # Current Default
 
     # [OUTPUT] Output files
     output_prefix="saige_set_test${catevr}.${gwas_id}.chr${chrom}"
@@ -114,6 +124,7 @@ for pheno_idx in {0..0}; do
         --destination "${output_dir}" \
         --brief \
         --priority="low" \
+        --instance-type=${instance_type} \
         -y
     fi
 

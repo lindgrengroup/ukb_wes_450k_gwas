@@ -120,6 +120,11 @@
     "release": "20.04",
     "version": "0"
   },
+  "access": {
+    "network": [
+      "*"
+    ]
+  },
   "regionalOptions": {
     "aws:eu-west-2": {
       "systemRequirements": {

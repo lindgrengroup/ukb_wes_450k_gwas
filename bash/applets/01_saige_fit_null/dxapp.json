@@ -79,6 +79,15 @@
       "help": ""
     },
     {
+      "name": "sex",
+      "class": "string",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
       "name": "covar_col_list",
       "class": "string",
       "optional": false,
@@ -142,5 +151,11 @@
     "distribution": "Ubuntu",
     "release": "20.04",
     "version": "0"
+  },
+  "access": {
+    "network": [
+      "*"
+    ]
   }
 }
+

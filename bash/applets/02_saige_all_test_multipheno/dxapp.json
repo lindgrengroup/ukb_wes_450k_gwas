@@ -25,6 +25,12 @@
       "help": ""
     },
     {
+      "name": "use_irnt",
+      "class": "string",
+      "optional": false,
+      "help": ""
+    },
+    {
       "name": "catevr",
       "class": "string",
       "optional": false,

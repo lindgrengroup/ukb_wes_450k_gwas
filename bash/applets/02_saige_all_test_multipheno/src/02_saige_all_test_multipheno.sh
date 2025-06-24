@@ -16,7 +16,12 @@ main() {
     output_dir="${saige_data_dir}/02_saige_set_test${catevr}/${phenotype_group}/${pop}/${sex}"
     
     # [INPUT] SAIGE null model file directory
-    fit_null_output_prefix="${saige_data_dir}/01_fit_null${catevr}/${phenotype_group}/${pop}/${sex}"
+    if [ ${use_irnt} == "true" ]; then
+      model_suffix=""
+    else
+      model_suffix="-no_irnt"
+    fi
+    fit_null_output_prefix="${saige_data_dir}/01_fit_null${model_suffix}${catevr}/${phenotype_group}/${pop}/${sex}"
 
     # [INPUT] Pheno list
     if [[ "${phenotype_group}" == *"qced_biomarkers"* ]]; then
@@ -61,10 +66,23 @@ main() {
     for pheno_idx in `seq $pheno_idx_start $pheno_idx_stop`; do
 
       pheno_col="${phenos[$pheno_idx]}" 
+      
+			# Only include IRNT-ed residualized phenotypes (specific to Mahalanobis phenotypes)
+    	if [[ $phenotype_group == "mahalanobis_v2"* ]] && [[ $pheno_col != *"irnt"* ]]; then
+    	  continue
+    	fi
+
       gwas_id="${pheno_col}-${pop}-${sex}"
+
+      # TEMPORARY (for testing LOCO option)
+      #gwas_id="${gwas_id}-loco"
+      loco_flag="--LOCO FALSE" # Default
+      #loco_flag="--LOCO TRUE --chrom $chrom" # For testing LOCO option
+
 
       # [OUTPUT] Output files
       output_prefix="saige_all_test${catevr}.${gwas_id}.chr${chrom}"
+      #output_prefix="not_fasttest-saige_all_test${catevr}.${gwas_id}.chr${chrom}"
       results_file="${output_dir}/${output_prefix}.tsv.gz"
 
       if [ $( dx ls -l ${results_file} 2> /dev/null | wc -l  ) -eq 0 ]; then
@@ -73,6 +91,11 @@ main() {
         
         # # [INPUT] SAIGE null model files
         model_file="${fit_null_output_prefix}/${gwas_id}.rda"
+        
+        # TEMPORARY (for testing LOCO option)
+        #model_file="${fit_null_output_prefix}/${gwas_id}_noLOCO.rda"
+
+
         variance_ratios="${fit_null_output_prefix}/${gwas_id}.varianceRatio.txt"
         dx download --overwrite "${model_file}" -o "${WD}/model_file.rda"
         dx download --overwrite "${variance_ratios}" -o "${WD}/variance_ratios.txt"
@@ -81,12 +104,12 @@ main() {
         docker run \
           -e HOME=${WD}  \
           -v ${WD}/:$HOME/ \
-          wzhou88/saige:1.1.6.3 \
+          wzhou88/saige:1.1.9 \
           step2_SPAtests.R  \
             --bedFile ${HOME}/bfile.bed \
             --bimFile ${HOME}/bfile.bim \
             --famFile ${HOME}/in/fam/* \
-            --LOCO FALSE  \
+            ${loco_flag}  \
             --AlleleOrder ref-first \
             --minMAF 0  \
             --minMAC 0.5  \

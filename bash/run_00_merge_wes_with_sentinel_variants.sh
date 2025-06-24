@@ -2,6 +2,13 @@
 
 set -u # throws error if variables are undefined
 
+## [OPTION] sex
+## Options:
+## - "both_sexes"
+## - "female"
+## - "male"
+sex=$1
+
 #WD="/Users/nbaya/gms/lindgren/ukb_wes/ukb_wes_450k_gwas"
 WD="/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas"
 source "/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_qc/bash/dnax_utils.sh" # needed for `upload_file` function
@@ -17,13 +24,17 @@ script_dnax="/saige_pipeline/scripts/${script}"
 # Upload script to DNAnexus
 upload_file "${script_local}" "${script_dnax}"
 
-for chrom in {1..20}; do
+for chrom in {1..23}; do
+  if [ "${chrom}" == "23" ]; then
+    chrom="X"
+  fi
+
   echo "Running merge_wes_with_sentinel for chr${chrom}"
   
   dx run swiss-army-knife \
   	-iin="/saige_pipeline/scripts/${script}" \
-  	-icmd="bash ${script} ${chrom}" \
-  	--name="merge_wes_with_sentinel-c${chrom}" \
+  	-icmd="bash ${script} ${sex} ${chrom}" \
+  	--name="merge_wes_with_sentinel-${sex}-c${chrom}" \
   	--instance-type "mem2_ssd2_v2_x16" \
   	--priority="high" \
   	--destination="${outdir}" \

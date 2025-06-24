@@ -79,6 +79,15 @@
       "help": ""
     },
     {
+      "name": "use_irnt",
+      "class": "string",
+      "optional": false,
+      "patterns": [
+        "*"
+      ],
+      "help": ""
+    },
+    {
       "name": "sex",
       "class": "string",
       "optional": false,

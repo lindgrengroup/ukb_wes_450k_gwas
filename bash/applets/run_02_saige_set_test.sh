@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "WARNING: use_irnt=false not yet implemented" && exit 1
+
 set -eu
 
 dx build 02_saige_set_test --overwrite

@@ -43,9 +43,11 @@ main() {
 
     # Get inverse-normalize flag if trait_type=="quantitative"
     if [ ${trait_type} == "quantitative" ]; then
-      trait_flags="--traitType=${trait_type}   --invNormalize=TRUE"
-    else
-      trait_flags="--traitType=${trait_type}"
+      if [ ${use_irnt} == "true" ]; then
+        use_irnt_flag="--invNormalize=TRUE"
+      else
+        use_irnt_flag="--invNormalize=FALSE"
+      fi
     fi
 
     ## Run script
@@ -57,13 +59,13 @@ main() {
       -e output_prefix="${output_prefix}"  \
       -e n_threads="${n_threads}" \
       -v ${WD}/:$HOME/ \
-      wzhou88/saige:1.1.6.3 step1_fitNULLGLMM.R  \
+      wzhou88/saige:1.1.9 step1_fitNULLGLMM.R  \
         --bedFile ${HOME}/in/plink_for_vr_bed/* \
         --bimFile ${HOME}/in/plink_for_vr_bim/* \
         --famFile ${HOME}/in/plink_for_vr_fam/* \
         --sparseGRMFile ${HOME}/in/sparse_grm/* \
         --sparseGRMSampleIDFile ${HOME}/in/sparse_grm_samples/*  \
-        --useSparseGRMtoFitNULL=TRUE  \
+        --useSparseGRMtoFitNULL=TRUE \
         --phenoFile ${HOME}/pheno_file \
         ${sample_id_include_flag} \
         --skipVarianceRatioEstimation FALSE \
@@ -72,10 +74,14 @@ main() {
         --qCovarColList="${qcovar_col_list}"  \
         --sampleIDColinphenoFile="IID" \
         --isCateVarianceRatio=FALSE \
-        ${trait_flags} \
+        --traitType=${trait_type} \
+        ${use_irnt_flag} \
         --outputPrefix="${HOME}/${output_prefix}" \
         --IsOverwriteVarianceRatioFile=TRUE \
-        --nThreads=${n_threads}
+        --nThreads=${n_threads} \
+        --LOCO=TRUE 
+        #--isLowMemLOCO=TRUE
+        # Added isLowMemLOCO=TRUE on 10 Oct 2024 (NOTE: --LOCO was already TRUE before this addition)
 
     mv *.rda out/model_file/
     mv *.varianceRatio.txt out/variance_ratios/

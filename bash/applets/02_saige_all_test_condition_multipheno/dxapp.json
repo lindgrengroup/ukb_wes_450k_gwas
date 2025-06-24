@@ -116,7 +116,7 @@
     {
       "name": "gene_assoc",
       "class": "array:file",
-      "optional": false,
+      "optional": true,
       "patterns": [
         "*"
       ],
@@ -125,7 +125,7 @@
     {
       "name": "marker_list",
       "class": "array:file",
-      "optional": false,
+      "optional": true,
       "patterns": [
         "*"
       ],
@@ -134,7 +134,7 @@
     {
       "name": "variant_assoc",
       "class": "array:file",
-      "optional": false,
+      "optional": true,
       "patterns": [
         "*"
       ],
@@ -143,7 +143,7 @@
     {
       "name": "log_file",
       "class": "array:file",
-      "optional": false,
+      "optional": true,
       "patterns": [
         "*"
       ],

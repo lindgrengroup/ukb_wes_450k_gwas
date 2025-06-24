@@ -25,6 +25,7 @@ OBESITY_PHENOS = [
 
 # The four phenotypes with high sample size (>300k samples)
 high_sample_size_obesity_phenos = [
+    'bmi',
     'body_mass_index_bmi',
     'whr_adj_bmi',
     'bmi_impedance',
@@ -44,7 +45,46 @@ obesity_phenotype_to_label_dict = {
     'total_tissue_fatp': 'Total tissue fat percentage',
     'tissuefatp_androidgynoidratio': 'Android-gynoid fat percentage ratio'
 }
-# -
+
+obesity_phenotype_to_short_label_dict = {
+    'bmi': 'BMI',
+    'body_mass_index_bmi': 'BMI',
+    'whr_adj_bmi': 'WHRadjBMI',
+#     'bmi_impedance': 'ImpBMI',
+    'body_fat_percentage': 'BodyFat%',
+    'gynoid_tissue_fatp': 'GynoidFat%',
+    'android_tissue_fatp': 'AndroidFat%',
+    'total_tissue_fatp': 'TotalFat%',
+    'tissuefatp_androidgynoidratio': 'AndGynRatio',
+    'visceral_adipose_tissue_volume_vat': 'VAT',
+    'abdominal_fat_ratio': 'AbdFatRatio',
+}
+
+misaligned_pheno_str_dict = {
+    'height': 'Height',
+    'ldl': 'LDL-C',
+    'bmi': 'BMI',
+    'bmd': 'Bone mineral density',
+    'iop': 'Intraoccular pressure',
+    'hba1c': 'HbA1C',
+    'aam': 'Age at menopause',
+    'cad':'Coronary artery disease',
+    't2d': 'Type 2 diabetes',
+    'osteoporosis': 'Osteoporosis',
+}
+
+misaligned_pheno_short_label_dict = {
+    'height': 'Height',
+    'ldl': 'LDL-C',
+    'bmi': 'BMI',
+    'bmd': 'BMD',
+    'iop': 'IOP',
+    'hba1c': 'HbA1C',
+    'aam': 'AAM',
+    'cad':'CAD',
+    't2d':'T2D',
+    'osteoporosis':'OP',
+}
 
 
 SET_TEST_GROUPS = [
@@ -55,6 +95,31 @@ SET_TEST_GROUPS = [
     'pLoF;damaging_missense;synonymous',
     'Cauchy'
 ]
+
+CSQ_CATEGORIES = [
+    'non_coding',
+    'synonymous',
+    'other_missense',
+    'damaging_missense',
+    'pLoF'
+]
+
+CSQ_COLOR_DICT = {
+    # wes consequences
+    'no_mutation': 'lightgrey',
+    'non_coding': 'lightgrey',
+    'synonymous': 'skyblue',
+    'other_missense': 'gold',
+    'damaging_missense': 'lightcoral',
+    'pLoF': 'darkred',
+    # imputed data consequences
+    'intergenic': 'lightgrey',
+    'upstream':'lightgrey',
+    'downstream': 'lightgrey',
+    'UTR3':'lightgrey',
+    'UTR5':'lightgrey',
+    'nonsynonymous':'gold',
+}
 
 GWS_PVAL_THRESHOLD = 5e-8
 
@@ -95,8 +160,10 @@ def get_obesity_phenotype_list():
     return get_phenotype_list(phenotype_group='obesity')
 
 
-def get_saige_results_path(pheno, chrom, phenotype_group='qced_biomarkers',
-                           pop='eur', sex='both_sexes', assoc='variant_test', dataset='wes'):
+def get_saige_results_path(
+        pheno, chrom, phenotype_group, pop='eur', sex='both_sexes', 
+        assoc='variant_test', dataset='wes'
+    ):
     dir_path = f'{GWAS_DATA_DIR}/02_saige_{assoc}{"-imputed_v3" if dataset=="imputed" else ""}/{phenotype_group}/{pop}/{sex}'
     fname = f'saige_{assoc}.{pheno}-{pop}-{sex}{"-imputed_v3" if dataset=="imputed" else ""}.chr{chrom}.tsv.gz'
     return f'{dir_path}/{fname}'
@@ -299,7 +366,8 @@ def standard_variant_processing(df_dict, df, dataset, remove_ur=False):
         csq = df_dict['csq'][['MarkerID','gene_id','gene_symbol','consequence_category']]
         df = df.merge(csq, on='MarkerID', how='left')
     elif dataset=='imputed':
-        print(f'Warning: imputed data may contain duplicate MarkerIDs, skipping merging with ANNOVAR')
+        pass
+#         print(f'Warning: imputed data may contain duplicate MarkerIDs, skipping merging with ANNOVAR')
 #         csq = df_dict['annovar'][['MarkerID','region_type','gene_symbol','dist_to_gene','csq']]
     
     return df
@@ -361,11 +429,17 @@ def read_saige_gene_assoc(df_dict, pheno, phenotype_group, pop='eur', sex='both_
             continue
         df_tmp = pd.read_csv(path, sep='\t')
         df_tmp['chrom'] = str(chrom)
-        for pval_field in ['Pvalue', 'Pvalue_Burden', 'Pvalue_SKAT']:
-            df_tmp[f'nlog10{pval_field}'] = -np.log10(df_tmp[pval_field])
         df_list.append(df_tmp)
     df = pd.concat(df_list, axis=0)
 
+    df = df.rename(columns={ 
+        'Pvalue':'Pvalue_SKATO' # Added 2024-11-28
+    })
+    
+    for test_type in ['SKATO', 'Burden', 'SKAT']:
+            df[f'nlog10Pvalue_{test_type}'] = -np.log10(df[f'Pvalue_{test_type}'])
+            df[f'chi2_{test_type}'] = stats.chi2.isf(df[f'Pvalue_{test_type}'], df=1)
+    
     gene_id_to_symbol_df = df_dict['csq'][[
         'gene_symbol', 'gene_id']].drop_duplicates(subset='gene_id')
     df = df.merge(gene_id_to_symbol_df, left_on='Region',
@@ -373,6 +447,56 @@ def read_saige_gene_assoc(df_dict, pheno, phenotype_group, pop='eur', sex='both_
 
     return df
 
+def get_saige_marker_list_path(
+        pheno, chrom, phenotype_group, pop='eur', sex='both_sexes', 
+        assoc='variant_test', dataset='wes'
+    ):
+    dir_path = f'{GWAS_DATA_DIR}/02_saige_{assoc}{"-imputed_v3" if dataset=="imputed" else ""}/{phenotype_group}/{pop}/{sex}'
+    fname = f'saige_{assoc}.{pheno}-{pop}-{sex}{"-imputed_v3" if dataset=="imputed" else ""}.chr{chrom}.tsv.markerList.txt.gz'
+    return f'{dir_path}/{fname}'
+
+def read_saige_marker_list(df_dict, pheno, phenotype_group, pop='eur', sex='both_sexes', assoc='variant_test', dataset='wes'):
+    
+    marker_list_id = f'{pheno}-{pop}-{sex}-marker_list'
+    
+    if marker_list_id not in df_dict:
+        def read_chrom(chrom): 
+            path = get_saige_marker_list_path(
+                pheno=pheno, 
+                chrom=chrom, 
+                phenotype_group=phenotype_group, 
+                pop=pop, 
+                sex=sex, 
+                assoc=assoc, 
+                dataset=dataset
+            )
+            df_chrom = pd.read_csv(path, sep='\t')
+            df_chrom['chrom'] = chrom
+            return df_chrom
+
+        markers = pd.concat([read_chrom(c) for c in list(range(1,23))+['X']])
+
+        # Count the number of rare and ultra-rare variants
+        for field in ('Rare_Variants','Ultra_Rare_Variants'):
+            count_field = f'n_{field.lower()}'
+            is_na = markers[field].isna()
+
+            # Set count to 0 if field is NA (i.e. no variants)
+            markers.loc[is_na, count_field] = 0
+
+            # Count the number of commas if the field is not NA (i.e. there are variants)
+            # NOTE: Add 1 because a list with only one variant has no commas, a list with two variants has 1 comma, etc.
+            markers.loc[~is_na, count_field] = markers.loc[~is_na, field].str.count(',') + 1
+
+            # Cast to ints
+            markers[count_field] = markers[count_field].astype(int)
+        
+        df_dict[marker_list_id] = markers
+        
+    else:
+        markers = df_dict[marker_list_id]
+    
+    return df_dict, markers
 
 def read_regenie_results(pheno):
     def get_path(chrom): return get_regenie_path(pheno=pheno, chrom=chrom)
@@ -494,34 +618,56 @@ def get_brava_variant_test_path(chrom, phenotype_group='obesity', pop='EUR', phe
     return f'{GWAS_DATA_DIR}/02_saige_all_test-brava/{phenotype_group}/{pop.lower()}/both_sexes/chr{chrom}_{pheno}_{pop.upper()}.txt.singleAssoc.txt.gz'
 
   
-def get_all_test_variant_assoc_path(pheno, chrom, phenotype_group, pop, sex):
-    return f'{GWAS_DATA_DIR}/02_saige_all_test/{phenotype_group}/{pop}/{sex}/saige_all_test.{pheno}-{pop}-{sex}.chr{chrom}.tsv.singleAssoc.txt.gz'
+def get_all_test_variant_assoc_path(pheno, chrom, phenotype_group, pop, sex, conditioned=False):
+    suffix = '_condition' if conditioned else ''
+    return f'{GWAS_DATA_DIR}/02_saige_all_test{suffix}/{phenotype_group}/{pop}/{sex}/saige_all_test{suffix}.{pheno}-{pop}-{sex}.chr{chrom}.tsv.singleAssoc.txt.gz'
+
     
-    
-def load_saige_all_test_variant_assoc(df_dict, gwas_id, phenotype_group='obesity'):
-    all_test_variant_assoc_id = f'{gwas_id}-all_test_variants'
+def load_saige_all_test_variant_assoc(df_dict, gwas_id, phenotype_group='obesity', use_conditioned=True):
+    """
+    use_conditioned : Boolean indication whether to use, where possible, results conditioned on finemapped common variants
+    """
+    all_test_variant_assoc_id = f'{gwas_id}-all_test_variants'+('_cond' if use_conditioned else '_uncond')
     if all_test_variant_assoc_id not in df_dict:
         pheno, pop, sex = gwas_id.split('-')
 
         group_test_df_list = []
         variant_test_df_list = []
         for chrom in list(range(1,23))+['X']:
-            path = get_all_test_variant_assoc_path(
-                pheno=pheno,
-                phenotype_group=phenotype_group,
-                pop=pop,
-                sex=sex,
-                chrom=chrom
-            )
-            try:
-                variant_test_df_list.append(pd.read_csv(
-                    path,
-                    sep='\t',
-                    compression='gzip'
-                ))
-            except: 
-                print(f'File does not exist: {path}')
+            
+            for conditioned in ([True, False] if use_conditioned else [False]): # Order is necessary in the array with two values, True should be first
+                path = get_all_test_variant_assoc_path(
+                    pheno=pheno,
+                    phenotype_group=phenotype_group,
+                    pop=pop,
+                    sex=sex,
+                    chrom=chrom,
+                    conditioned=conditioned
+                )
+                         
+                if isfile(path):
+                    df = pd.read_csv(path, sep='\t', compression='gzip')
+                    
+                    if not use_conditioned:
+                        print(f'Using unconditioned variant-level results for {gwas_id} chr{chrom}')
+                    
+                    if conditioned:
+                        print(f'Using conditioned variant-level results for {gwas_id} chr{chrom}')
+                        # Replace unconditioned fields with conditioned fields to harmonize tables across 
+                        # conditioned and non-conditioned data.
+                        # First, remove non-conditioned fields, then remove "_c" suffix from conditioned
+                        # fields to make the tables match the format of typical non-conditioned analyses.
+                        conditioned_fields = [f for f in df if f[-2:]=='_c']
+                        nonconditioned_fields = [f.replace('_c','') for f in conditioned_fields]
+                        assert all([f in df for f in nonconditioned_fields]), 'Not all conditioned fields have a non-conditioned counterpart' # Sanity check
+                        df = df.drop(columns=nonconditioned_fields) # This is necessary to avoid colliding column names later
+                        df = df.rename(columns=dict(zip(conditioned_fields, nonconditioned_fields)))
 
+                    variant_test_df_list.append(df)
+                    break # If the file for conditioned=True exists, skip trying to read conditioned=False. Redundant when conditioned=False
+                        
+                elif not conditioned: # Only print if it's the path for the non-conditioned results
+                    print(f'File does not exist: {path}')
 
         variant_assoc = pd.concat(variant_test_df_list, axis=0)
         variant_assoc = standard_variant_processing(
@@ -532,7 +678,7 @@ def load_saige_all_test_variant_assoc(df_dict, gwas_id, phenotype_group='obesity
         
         df_dict[all_test_variant_assoc_id] = variant_assoc
     
-    return df_dict[all_test_variant_assoc_id]
+    return df_dict, df_dict[all_test_variant_assoc_id]
 
   
 def load_finemapping_results(df_dict, gwas_id):
@@ -573,10 +719,21 @@ def load_imputed_results(df_dict, phenotype_group, gwas_id, force_read=False):
         )
 
     if 'prob' not in df_dict[imputed_gwas_id].columns:
-        finemapped_loci = read_finemap_output(df_dict=df_dict, locus_id=imputed_gwas_id)
-        finemapped_loci = finemapped_loci.rename(columns={'rsid':'MarkerID'})
-        finemapped_loci = finemapped_loci[['MarkerID','prob','lead_variant']]
-        df_dict[imputed_gwas_id] = df_dict[imputed_gwas_id].copy().merge(finemapped_loci, on='MarkerID', how='left')
+        finemapped_loci = read_finemap_output(
+            df_dict=df_dict, 
+            locus_id=imputed_gwas_id, 
+            min_maf=0.001
+        )
+        # These fields are exact matches so can just be renamed about worrying about allele order
+        # See `reformat_to_z_file()` in finemap_utils.py to verify that the fields are exact matches.
+        finemapped_loci = finemapped_loci.rename(columns={
+            'rsid':'MarkerID',
+            'allele1':'Allele1',
+            'allele2':'Allele2'
+        })
+        finemapped_loci = finemapped_loci[['MarkerID','prob','lead_variant','Allele1','Allele2']]
+        # Merge FINEMAP results into GWAS data
+        df_dict[imputed_gwas_id] = df_dict[imputed_gwas_id].copy().merge(finemapped_loci, on=['MarkerID','Allele1','Allele2'], how='left')
     
 #     if gene_symbol_in_cols:
 #         df_dict[imputed_gwas_id] = df_dict[imputed_gwas_id].drop(columns=['gene_symbol'])
@@ -858,7 +1015,7 @@ def print_summary(df, phenos, assoc_test='variant'):
             
     if 'maf' in df.columns:
         print('\nPer MAF bin:')
-        maf_thresholds = [0, 1e-6, 1e-4, 1e-2, 0.5]
+        maf_thresholds = [0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 0.5]
         maf_bins = zip(maf_thresholds[:-1], maf_thresholds[1:])
         for maf_lower, maf_upper in maf_bins:
             n_bin = ((df["maf"]>maf_lower)&(df["maf"]<=maf_upper)).sum()
@@ -873,185 +1030,7 @@ def print_summary(df, phenos, assoc_test='variant'):
         for pip_lower, pip_upper in pip_bins:
             n_bin = ((df[pip_col_name]>pip_lower)&(df[pip_col_name]<=pip_upper)).sum()
             print(f'* ({pip_lower}, {pip_upper}]: {n_bin} ({100*n_bin/n_total:.2f}%)')
-            
 
-# def get_duncan_transformed_burden_test_betas_maf(df_dict, gwas_id, phenotype_group, csq_categories_list, max_maf_list = [0.01,0.001,0.0001]):
-    
-#     all_test_rare_variants = load_saige_all_test_variant_assoc(
-#         df_dict=df_dict,
-#         gwas_id=gwas_id,
-#         phenotype_group=phenotype_group
-#     )
-#     all_test_rare_variants['gene_id_split'] = all_test_rare_variants['gene_id'].str.split('/')
-#     all_test_rare_variants = all_test_rare_variants.explode('gene_id_split')
-
-#     # filter to variants:
-#     # - MAF <= max_maf
-#     # - consequence = "pLoF" or "damaging_missense"
-
-#     grouped_df_list = []
-    
-#     for max_maf in max_maf_list:
-#         for csq_categories in csq_categories_list:
-
-#             group = ';'.join(csq_categories)
-
-#             subset = all_test_rare_variants[
-#                 (all_test_rare_variants.maf<=max_maf)
-#                 & (all_test_rare_variants.consequence_category.isin(csq_categories))
-#             ]
-
-#             # Sum across all variants in gene
-#             subset_grouped = subset.groupby(['gene_id_split']).sum()
-
-#             subset_grouped['BETA_burden_duncan'] = subset_grouped['Tstat']/subset_grouped['var']
-#             subset_grouped['Group'] = group
-#             subset_grouped['max_MAF'] = max_maf
-#             subset_grouped = subset_grouped.reset_index()
-
-#             grouped_df_list.append(subset_grouped)
-        
-#     grouped = pd.concat(grouped_df_list, axis=0)
-    
-#     grouped = grouped.rename(
-#         columns={
-#             'gene_id': 'old_gene_id',
-#             'gene_id_split':'gene_id',
-#             'maf': 'burden_maf'
-#         }
-#     )
-    
-#     return grouped
-
-
-def get_duncan_transformed_burden_test_betas_maf(df_dict, gwas_id, phenotype_group, csq_categories_list, max_maf_list = [0.01,0.001,0.0001]):
-    
-    all_test_rare_variants = load_saige_all_test_variant_assoc(
-        df_dict=df_dict,
-        gwas_id=gwas_id,
-        phenotype_group=phenotype_group
-    )
-    
-    if any(all_test_rare_variants['gene_id'].str.contains('/')):
-        all_test_rare_variants['gene_id_split'] = all_test_rare_variants['gene_id'].str.split('/')
-        all_test_rare_variants = all_test_rare_variants.explode('gene_id_split')
-        all_test_rare_variants = all_test_rare_variants.rename(columns={
-            'gene_id': 'old_gene_id',
-            'gene_id_split':'gene_id',
-        })
-
-    # Extract and process aggregated ultra-rare ("UR") variant association results
-    ur = all_test_rare_variants[all_test_rare_variants['chrom']=='UR']
-    ur['gene_id'] = ur['MarkerID'].str.split(':', expand=True)[0]
-    ur['Group'] = ur['MarkerID'].str.split(':', expand=True)[1]
-    ur['max_MAF'] = ur['MarkerID'].str.split(':', expand=True)[2].astype(float)
-
-    # For each combination of max_MAF and consequence group, group variants and sum 
-
-    grouped_df_list = []
-    
-    for max_maf in max_maf_list:
-        for csq_categories in csq_categories_list:
-            
-            subset = all_test_rare_variants[
-                (all_test_rare_variants.maf<=max_maf)
-                & (all_test_rare_variants.consequence_category.isin(csq_categories))
-            ][['gene_id','maf','Tstat','var']] # for efficiency, only extract necessary columns
-            
-            group = ';'.join(csq_categories)
-            
-            ur_group = ur[
-                (ur['Group']==group)
-                & (ur['max_MAF']==max_maf)
-            ][['gene_id','maf','Tstat','var']]
-            
-            # Append ur_group to the end
-            subset = pd.concat([subset, ur_group], axis=0)
-
-            # Sum across all variants in gene
-#             subset_grouped = subset.groupby(['gene_id']).sum()
-            subset_grouped = subset.groupby(['gene_id']).sum() # for efficiency, only group necessary columns
-
-#             subset_grouped_ct = subset.groupby(['gene_id']).count()
-#             genes_with_multiple_variants = subset_grouped_ct[subset_grouped_ct['MarkerID']>1].index
-#             subset_grouped = subset_grouped[subset_grouped.index.isin(genes_with_multiple_variants)]
-
-            subset_grouped['BETA_burden_duncan'] = subset_grouped['Tstat']/subset_grouped['var']
-            
-            subset_grouped['Group'] = group
-            subset_grouped['max_MAF'] = max_maf
-            subset_grouped = subset_grouped.reset_index()
-
-            grouped_df_list.append(subset_grouped)
-        
-    grouped = pd.concat(grouped_df_list, axis=0)
-    
-    grouped = grouped.rename(
-        columns={
-            'maf': 'burden_maf'
-#             'AF_Allele2': 'burden_maf'
-        }
-    )
-    
-    return grouped
-
-
-# def get_burden_beta_and_maf_fields(df_dict, gwas_id, burden_test, 
-#     csq_categories=[['pLoF'],['pLoF','damaging_missense']]):
-    
-#     variant_assoc = load_saige_all_test_variant_assoc(
-#         df_dict=df_dict,
-#         gwas_id=gwas_id
-#     )
-    
-#     grouped = get_duncan_transformed_burden_tests(wes=variant_assoc)
-    
-#     merged_w_grouped = burden_test.merge(
-#         grouped[['Group','gene_id','maf_grouped','BETA_burden_duncan']], 
-#         on=['Group','gene_id'], 
-#         how='left'
-#     )
-    
-#     return merged_w_grouped
-
-# def deprecated_get_gene_aggregated_maf(df_dict, gwas_id, group_test='pLoF;damaging_missense', max_maf=0.01):
-#     set_gwas_id = f'{gwas_id}-set'
-#     print(set_gwas_id)
-#     if set_gwas_id not in df_dict:
-#         df_dict[set_gwas_id] = read_saige_gene_assoc(
-#             df_dict=df_dict, 
-#             pheno=pheno, 
-#             phenotype_group=phenotype_group,
-#             pop=gwas_id.split('-')[1],
-#             sex=gwas_id.split('-')[2],
-#         )
-
-#     genes = df_dict[set_gwas_id]
-
-#     if 'MAF_aggregated' not in genes.columns:
-#         wes_gwas_id = f'{gwas_id}-wes'
-
-#         # Choose set of results to use for aggregating MAF
-#         max_set = genes[
-#             (genes['Group']==group_test)
-#             &(genes['max_MAF']==max_maf)
-#         ]
-
-#         wes = df_dict[wes_gwas_id]
-#         if 'sexdiff' in gwas_id:
-#             if ('N' not in wes.columns) and all([c for c in ['N_f','N_m'] if c in wes.columns]):
-#                 wes['N'] = wes['N_f']+wes['N_m']
-#             for field in ['MAC','Number_rare','Number_ultra_rare']:
-#                 max_set[field] = max_set[f'{field}_m'] + max_set[f'{field}_f']
-        
-#         n_samples = get_sample_size(wes['N'])
-#         max_set['MAF_aggregated'] = max_set['MAC']/((max_set['Number_rare']+max_set['Number_ultra_rare'])*2*n_samples)
-
-#         # Annotate *all* group tests with the same aggregated MAF from the single group test we've chosen
-
-#         df_dict[set_gwas_id] = genes.merge(max_set[['Region', 'MAF_aggregated']], on='Region')
-    
-#     return df_dict, df_dict[set_gwas_id]
 
 def get_effect_size_of_minor_allele(df, eaf_col='AF_Allele2', maf_col='maf', beta_col='beta'):
     """
@@ -1066,37 +1045,141 @@ def get_effect_size_of_minor_allele(df, eaf_col='AF_Allele2', maf_col='maf', bet
     assert all(sign!=0)
     return sign * df[beta_col]
 
+
+def get_unweighted_burden_test_betas_and_maf(df_dict, gwas_id, phenotype_group, csq_categories_list, max_maf_list = [0.01,0.001,0.0001], use_conditioned=True):
+    """
+    Primarily used to get effect sizes and MAF for trumpet plots.
+    
+    The "unweighted betas" are the effect sizes without the default weights that SAIGE assigns using MAF and the Beta distribution. This would be equivalent to running step 2 of SAIGE set-based tests with the --is_no_weight_in_groupTest=TRUE flag. The unweighted effect sizes should be on the same scale as variant-level effect sizes, whereas in the weighted version the effect sizes are lower.
+    
+    The burden MAF is calculated as the sum of MAF of all variants included in the burden mask.
+    """
+    # Check if csq_categories_list variable is valid (it must be a list of lists of consequences)
+    assert all([x in CSQ_CATEGORIES for y in csq_categories_list for x in y]), f'csq_categories_list must be a list of lists!: {csq_categories_list}'
+    
+    df_dict, all_test_rare_variants = load_saige_all_test_variant_assoc(
+        df_dict=df_dict,
+        gwas_id=gwas_id,
+        phenotype_group=phenotype_group,
+        use_conditioned=use_conditioned
+    )
+    
+    if any(all_test_rare_variants['gene_id'].str.contains('/')):
+        all_test_rare_variants['gene_id_split'] = all_test_rare_variants['gene_id'].str.split('/')
+        all_test_rare_variants = all_test_rare_variants.explode('gene_id_split')
+        all_test_rare_variants = all_test_rare_variants.rename(columns={
+            'gene_id': 'old_gene_id',
+            'gene_id_split':'gene_id',
+        })
+
+    # Process aggregated ultra-rare ("UR") variant association results
+    is_ur = all_test_rare_variants['chrom']=='UR'
+    marker_id_split = all_test_rare_variants.loc[is_ur, 'MarkerID'].str.split(':', expand=True)
+    all_test_rare_variants.loc[is_ur, 'gene_id'] = marker_id_split[0]
+    all_test_rare_variants.loc[is_ur, 'consequence_category'] = marker_id_split[1]
+    all_test_rare_variants.loc[is_ur, 'max_MAF'] = marker_id_split[2].astype(float)
+    
+    
+    # For each combination of max_MAF and consequence group, group variants and sum 
+    grouped_df_list = []
+    
+    for max_maf in max_maf_list:
+        for csq_categories in csq_categories_list:
+            subset = all_test_rare_variants[
+                (all_test_rare_variants['maf']<=max_maf)
+                & (all_test_rare_variants['consequence_category'].isin(csq_categories))
+                & ((all_test_rare_variants['max_MAF']==max_maf)|~is_ur) # If row contains UR result, filter to the specific max_MAF mask (otherwise there may be duplicate entries)
+            ][['gene_id','AF_Allele2','maf','Tstat','var']] # for efficiency, only extract necessary columns
+            
+            # Check that all variants will be accounted for in the next step
+            assert (
+                (subset['AF_Allele2']==subset['maf'])
+                |(subset['AF_Allele2']==(1-subset['maf']))
+            ).all()
+            
+            # T-stat with minor allele as effect allele
+            subset['Tstat_minor_allele'] = get_effect_size_of_minor_allele(
+                df=subset, 
+                eaf_col='AF_Allele2', 
+                maf_col='maf', 
+                beta_col='Tstat'
+            )
+
+            # Sum across all variants in gene
+            subset_grouped = subset.groupby(['gene_id']).sum() # for efficiency, only group necessary columns
+            
+#             genes_with_multiple_variants = subset_grouped_ct[subset_grouped_ct['MarkerID']>1].index
+#             subset_grouped = subset_grouped[subset_grouped.index.isin(genes_with_multiple_variants)]
+
+            
+            # Unweighted burden effect sizes
+            subset_grouped['BETA_Burden_unweighted'] = subset_grouped['Tstat_minor_allele']/subset_grouped['var']
+            
+            subset_grouped['Group'] = ';'.join(csq_categories)
+            subset_grouped['max_MAF'] = max_maf
+            subset_grouped = subset_grouped.reset_index()
+
+            grouped_df_list.append(subset_grouped)
+        
+    grouped = pd.concat(grouped_df_list, axis=0)
+    
+    grouped = grouped.rename(
+        columns={
+            'maf': 'burden_maf'
+        }
+    )
+    
+    return grouped
+
                                                           
-def get_gene_aggregated_maf_and_burden_beta(df_dict, phenotype_group, gwas_id, 
-    csq_categories_list = [['pLoF'],['pLoF','damaging_missense']]):
-    all_test_genes_gwas_id = f'{gwas_id}-all_test_genes'
+def get_gene_aggregated_maf_and_burden_beta(
+    df_dict, phenotype_group, gwas_id, csq_categories_list = [['pLoF'],['pLoF','damaging_missense']],
+    use_conditioned=True, recalculate=False
+):
+    all_test_genes_gwas_id = f'{gwas_id}-all_test_genes'+('_cond' if use_conditioned else '_uncond')
     
     print(all_test_genes_gwas_id)
     if all_test_genes_gwas_id not in df_dict:
         pheno, pop, sex = gwas_id.split('-')
-        df_dict[all_test_genes_gwas_id] = read_saige_gene_assoc(
-            df_dict=df_dict, 
-            pheno=pheno, 
-            phenotype_group=phenotype_group,
-            pop=pop,
-            sex=sex,
-            assoc='all_test'
-        )
+        
+        if use_conditioned:
+            results = read_saige_all_test_condition(
+                df_dict=df_dict,
+                phenotype_group=phenotype_group,
+                gwas_id=gwas_id
+            )
+        else:
+            results = read_saige_gene_assoc(
+                df_dict=df_dict, 
+                pheno=pheno, 
+                phenotype_group=phenotype_group,
+                pop=pop,
+                sex=sex,
+                assoc='all_test'
+            )
+        
+        df_dict[all_test_genes_gwas_id] = results
 
     genes = df_dict[all_test_genes_gwas_id]
     
-    if 'burden_maf' not in genes.columns:
+    unweighted_beta_and_maf_cols = ['burden_maf','BETA_Burden_unweighted']
+    if recalculate and any([c in genes for c in unweighted_beta_and_maf_cols]):
+        print(f'Recalculating unweighted burden test betas and MAF...')
+        genes = genes.drop(columns=unweighted_beta_and_maf_cols)
+    
+    if any([c not in genes.columns for c in unweighted_beta_and_maf_cols]):
         
-        grouped = get_duncan_transformed_burden_test_betas_maf(
+        grouped = get_unweighted_burden_test_betas_and_maf(
             df_dict=df_dict, 
             gwas_id=gwas_id, 
             phenotype_group=phenotype_group, 
             csq_categories_list=csq_categories_list, 
-            max_maf_list = genes['max_MAF'].unique()
+            max_maf_list = genes['max_MAF'].unique(),
+            use_conditioned=use_conditioned
         )
     
         genes = genes.merge(
-            grouped[['Group','max_MAF','gene_id','burden_maf','BETA_burden_duncan']], 
+            grouped[['Group','max_MAF','gene_id']+unweighted_beta_and_maf_cols], 
             on=['Group','max_MAF','gene_id'], 
             how='left'
         )
@@ -1289,3 +1372,235 @@ def get_hwat_results():
         hwat[f'hWAT_D{day}_sig_lt_10'] = (hwat[f'hWAT_D{day}_mean']+1.96*hwat[f'hWAT_D{day}_sem'])<10
 
     return hwat
+
+
+def get_benjamini_hochberg_corrected_pval(df, pval_field, fdr = 0.01):
+    """
+    P-values less than or equal to the BH-corrected p-value threshold are considered significant.
+    
+    pval_field : str : Name of column in `df` which contains p-values to be used
+    fdr : float : False discovery rate
+    """
+    df = df.sort_values(by=pval_field, ascending=True)
+    
+    # Number of hypotheses being tests (e.g. number of genes)
+    m = len(df)
+
+    df['rank'] = range(1,m+1)
+    df['critical_value'] = fdr*(df['rank']/m)
+
+    is_pval_lt_crit = df[pval_field]<=df['critical_value']
+    if is_pval_lt_crit.any():
+        bh_pval_threshold = df[is_pval_lt_crit][pval_field].max()
+    else:
+        bh_pval_threshold = df['critical_value'].min()
+    print(f'Benjamini-Hochberg p-value threshold (FDR={fdr}): {bh_pval_threshold}')
+
+    return df, bh_pval_threshold
+
+
+def get_saige_all_test_condition_path(phenotype_group, gwas_id, chrom):
+    """
+    Get path to results from SAIGE burdent testing conditioned on common variants
+    """
+    pheno, pop, sex = gwas_id.split('-')
+    
+    path_prefix= f'{GWAS_DATA_DIR}/02_saige_all_test_condition/{phenotype_group}/{pop}/{sex}'
+
+    # Full results file
+    all_test_condition_path = f'{path_prefix}/saige_all_test_condition.{gwas_id}.chr{chrom}.tsv.gz'
+    
+    # Results file, but with only the fewest number of tests (i.e. minimal tests) needed
+    min_w_syn_path = f'{path_prefix}/minimal_tests_w_syn-saige_all_test_condition.{gwas_id}.chr{chrom}.tsv.gz'
+    
+    # File indicating that phenotype has no sentinel variants in given chromosome
+    no_sentinels_path = f'{path_prefix}/no_sentinels.{pheno}.chr{chrom}.log'
+    
+    return all_test_condition_path, min_w_syn_path, no_sentinels_path
+
+
+def read_saige_all_test_condition(df_dict, phenotype_group, gwas_id):
+    """
+    Read results from SAIGE burden testing conditioned on common variants
+    """
+    pheno, pop, sex = gwas_id.split('-')
+    
+    df_list = []
+
+    for chrom in list(range(1, 23))+['X']:
+        path, min_w_syn_path, no_sentinels_path = get_saige_all_test_condition_path(
+            phenotype_group=phenotype_group, 
+            gwas_id=gwas_id,
+            chrom=chrom
+        )
+        if isfile(path):
+            print(f'Using conditioned gene-level results for {gwas_id} chr{chrom}')
+            df_tmp = pd.read_csv(path, sep='\t')    
+        elif isfile(min_w_syn_path):
+            print(f'Using conditioned gene-level results for a reduced set of masks {gwas_id} chr{chrom}')
+            df_tmp = pd.read_csv(min_w_syn_path, sep='\t')
+        else:
+            if isfile(no_sentinels_path):
+                print(f'No sentinel variants, skipping conditioned gene-level results for {gwas_id} chr{chrom}')
+                # If no sentinel variants exist, make blank file from an arbitrarily chosen file
+                # Only read the columns
+                df_tmp = pd.read_csv(
+                    f'{GWAS_DATA_DIR}/02_saige_all_test_condition/obesity/eur/both_sexes/saige_all_test_condition.bmi-eur-both_sexes.chr21.tsv.gz', 
+                    sep='\t',
+                    nrows=0 # Ignore all data, just use column names (i.e. read just the first row)
+                )                
+            else:
+                print(f'No file for {pheno} sex={sex} chr{chrom}: {path}')
+                continue
+        df_tmp['chrom'] = str(chrom)    
+        df_list.append(df_tmp)
+    df = pd.concat(df_list, axis=0)
+
+    gene_id_to_symbol_df = df_dict['csq'][[
+        'gene_symbol', 'gene_id']].drop_duplicates(subset='gene_id')
+    df = df.merge(gene_id_to_symbol_df, left_on='Region',
+                  right_on='gene_id', how='left')
+    
+    df = df.rename(columns={
+        'Pvalue':'Pvalue_SKATO',
+        'Pvalue_cond':'Pvalue_SKATO_cond'
+    })
+    
+    for suffix in ['','_cond']:
+        for test in ['SKATO','Burden','SKAT']:
+            df[f'nlog10Pvalue_{test}{suffix}'] = -np.log10(df[f'Pvalue_{test}{suffix}'])
+            df[f'chi2_{test}{suffix}'] = stats.chi2.isf(df[f'Pvalue_{test}{suffix}'], df=1) # Added 2024-11-28
+
+    return df
+
+
+def get_all_conditioned_analyses(df_dict, finemap_min_maf=0.001, include_loci_without_sentinel_variants=True, include_extraneous_loci=False, allow_missing=False, pheno_list=get_obesity_phenotype_list()):
+    # The total set of phenotype-gene combinations for which we run conditional analyses
+    # NOTE: Not all of these have sentinel variants on the chromosome to condition on. 
+    for_cond_analysis = pd.read_csv(
+        f'{GWAS_DATA_DIR}/significant_results/ukb_wes_450k.obesity.grouptest.both_sexes_v6.bh_significant.fdr_0.5.maxmaf_0.01_0.001.plof_plof-damagingmissense.tsv.gz',
+        sep='\t'
+    )
+    for_cond_analysis = for_cond_analysis.rename(columns={'Pvalue':'Pvalue_SKATO','nlog10Pvalue':'nlog10Pvalue_SKATO'})
+
+    phenotype_group='obesity'
+    pop='eur'
+    sex='both_sexes'
+
+    cond_df_list = []
+
+    for pheno in pheno_list:
+        gwas_id = f'{pheno}-{pop}-{sex}'
+        all_test_cond_id = f'{gwas_id}-all_test_genes_cond'
+        print(all_test_cond_id)
+        if all_test_cond_id not in df_dict:
+            df_dict[all_test_cond_id]  = read_saige_all_test_condition(
+                df_dict=df_dict,
+                phenotype_group=phenotype_group,
+                gwas_id=gwas_id,
+            )
+
+        tmp_cond = df_dict[all_test_cond_id]
+        tmp_cond['pheno'] = pheno
+        tmp_cond['sex'] = sex
+        cond_df_list.append(tmp_cond)
+        print()
+
+    cond = pd.concat(cond_df_list, axis=0)
+
+    # Get list of phenotype-chrom pairs with sentinel variants
+    print(f'Using FINEMAP results for variants with MAF>{finemap_min_maf}')
+    sentinel_dir = f'/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_finemapping/data/finemap_minmaf{finemap_min_maf}/sentinel_variants'
+    sentinels = pd.read_csv(
+        f'{sentinel_dir}/sentinels.max_log10bf.include_ties.obesity.both_sexes.tsv.gz',
+        sep='\t'
+    )
+    sentinels = sentinels.rename(columns={'chromosome':'chrom'})
+    sentinels['pheno_chrom_id'] = sentinels[['pheno','chrom']].apply(lambda x: '-'.join(x), axis=1)
+    sentinel_uniq_chrom_pheno = sentinels.drop_duplicates('pheno_chrom_id')[['pheno_chrom_id']]
+
+    # Merge with conditioned results
+    merge_on = [c for c in cond if (c in for_cond_analysis)&('Pvalue' not in c)&('Burden' not in c)]
+    cond_merged = for_cond_analysis.merge(cond, on=merge_on, how='outer' if include_extraneous_loci else 'left', suffixes=['','_v2'])
+    cond_merged['pheno_chrom_id'] = cond_merged[['pheno','chrom']].apply(lambda x: '-'.join(x), axis=1)
+    cond_merged['has_sentinel'] = cond_merged['pheno_chrom_id'].isin(sentinels['pheno_chrom_id'])
+
+    # Define whether conditional analysis is complete
+    is_missing = cond_merged['has_sentinel']&cond_merged['Pvalue_SKATO_cond'].isna()
+    is_run = cond_merged['Pvalue_SKATO_cond'].notna()
+    is_not_needed = ~cond_merged['has_sentinel']
+    cond_merged.loc[is_missing, 'is_complete'] = False
+    cond_merged.loc[is_run|is_not_needed, 'is_complete'] = True
+
+    # Impute "missing" values for phenotype-chrom combos which do not have sentinel variants to condition on
+    for field in [c for c in cond_merged if '_cond' in c]:
+        cond_merged.loc[is_not_needed, field] = cond_merged.loc[is_not_needed, field.replace('_cond','')]
+
+    if not allow_missing:
+        assert cond_merged['is_complete'].all()
+        
+    if not include_loci_without_sentinel_variants:
+        cond_merged = cond_merged.loc[~cond_merged['has_sentinel']]
+
+    return cond_merged
+
+def map_pval_to_siglevel(pval, pval_to_siglevel_dict=None):
+    if pval_to_siglevel_dict is None:
+        pval_to_siglevel_dict={
+                1: '',
+                0.05: '*',
+                0.01: '**',
+                0.001: '***',
+            }
+    return pval_to_siglevel_dict[
+        min([p for p in pval_to_siglevel_dict.keys() if (pval<p) or (p==pval==1)])
+    ]
+
+def saige_cct(pvals, weights=None):
+    # Implementation of Cauchy combination test from SAIGE
+    # Translated into Python from:
+    # https://github.com/saigegit/SAIGE/blob/main/R/CCT_modified.R
+    
+    #### check if there is NA
+    if np.any(np.isnan(pvals)):
+        raise ValueError("Cannot have NAs in the p-values!")
+    
+    #### check if all p-values are between 0 and 1
+    if np.any(pvals < 0) or np.any(pvals > 1):
+        raise ValueError("All p-values must be between 0 and 1!")
+    
+    #### check if there are p-values that are either exactly 0 or 1.
+    is_zero = np.any(pvals == 0)
+    is_one = np.any(pvals == 1)
+    
+    if is_zero:
+        return 0
+    
+    if is_one:
+        return min(1, np.min(pvals) * len(pvals))
+
+    #### check the validity of weights (default: equal weights) and standardize them.
+    if weights is None:
+        weights = np.full(len(pvals), 1 / len(pvals))
+    elif len(weights) != len(pvals):
+        raise ValueError("The length of weights should be the same as that of the p-values!")
+    elif np.any(weights < 0):
+        raise ValueError("All the weights must be positive!")
+    else:
+        weights = weights / np.sum(weights)
+    
+    #### check if there are very small non-zero p-values
+    is_small = pvals < 1e-16
+    if np.sum(is_small) == 0:
+        cct_stat = np.sum(weights * np.tan((0.5 - pvals) * np.pi))
+    else:
+        cct_stat = np.sum((weights[is_small] / pvals[is_small]) / np.pi)
+        cct_stat += np.sum(weights[~is_small] * np.tan((0.5 - pvals[~is_small]) * np.pi))
+    
+    #### check if the test statistic is very large.
+    if cct_stat > 1e+15:
+        pval = (1 / cct_stat) / np.pi
+    else:
+        pval = 1 - stats.cauchy.cdf(cct_stat)
+    
+    return pval

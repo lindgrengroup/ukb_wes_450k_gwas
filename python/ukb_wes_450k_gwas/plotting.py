@@ -71,12 +71,15 @@ def clump_loci(df, clump_by='gene_symbol', sort_by='nlog10pval', ascending=False
     return pd.concat(loci_df_list, axis=0)
 
 
-def add_labels(x, y, labels, ax, highlight_labeled_points_kwargs={}, sig=False):
+def add_labels(x, y, labels, ax, label_text_kwargs={}, highlight_labeled_points_kwargs={}, sig=False, fontsize=None, fontstyle='italic'):
     labels_to_add = [
         ax.text(
             x[i], 
             y[i], 
             labels[i], 
+            fontsize=fontsize,
+            fontstyle=fontstyle,
+            **label_text_kwargs
         ) for i in range(len(x))
     ]
 
@@ -89,9 +92,14 @@ def add_labels(x, y, labels, ax, highlight_labeled_points_kwargs={}, sig=False):
 
     return labels_to_add
 
-def plot_qq(df, nlog10pval_field = 'nlog10pval', maf_bins=None, logscale=False, 
+def get_lambda_gc(chisq_vec, quantile=0.5):
+    return np.nanquantile(chisq_vec, q=quantile)/stats.chi2.ppf(q=quantile, df=1)
+
+def plot_qq(df, nlog10pval_field = 'nlog10pval', maf_bins=None, logscale=False, confidence_interval=0.95,
     figsize=(9*1.2,6*1.2), dpi=100, title='', ax=None, scatter_kwargs={}, legend=True, print_maf_bin_counts=True,
-    n_top_genes_to_label=0, clump_variants_into_loci=False, assoc='variant'):
+    label_field='gene_symbol', n_top_results_to_label=0, clump_variants_into_loci=False, label='Observed', assoc='variant',
+    include_identity=True, chi2_field = None, effect_field = None, lambda_gc_quantile=0.5
+):
     r'''Makes QQ plot for fields in `fields`.
 
     maf_bins should be a list of tuples, indicating min and max MAF per bin.
@@ -105,15 +113,12 @@ def plot_qq(df, nlog10pval_field = 'nlog10pval', maf_bins=None, logscale=False,
         return exp
 
     # Make 95% confidence interval
-    def get_confidence_intervals(n, CI=0.95):
+    def get_confidence_intervals(n, confidence_interval=0.95):
         k = np.arange(1,n+1)
         a = k
         b = n+1-k
-        intervals=stats.beta.interval(CI, a, b) # get 95% CI with parameters a and b
+        intervals=stats.beta.interval(confidence_interval, a, b) # get 95% CI with parameters a and b
         return intervals
-
-    def get_lambda_gc(chisq_vec):
-        return np.median(chisq_vec)/stats.chi2.ppf(q=0.5, df=1)
 
     df = df[df[nlog10pval_field].notna()].copy()
     
@@ -127,34 +132,52 @@ def plot_qq(df, nlog10pval_field = 'nlog10pval', maf_bins=None, logscale=False,
 
     n = df.shape[0]
     exp = get_expected(n)
-    intervals = get_confidence_intervals(n)
     
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-    ax.plot(exp,exp,'k--', label='Null')
-    ax.fill_between(
-        x=exp[::-1], # need to reverse order of array exp to match intervals
-        y1=-np.log10(intervals[0]),
-        y2=-np.log10(intervals[1]),
-        color='lightgrey',
-        label='95% CI'
-    )
+    
+    if include_identity:
+        ax.plot(exp,exp,'k--', label='Null')
+        
+    if confidence_interval>0:
+        intervals = get_confidence_intervals(n=n, confidence_interval=confidence_interval)
+        ax.fill_between(
+            x=exp[::-1], # need to reverse order of array exp to match intervals
+            y1=-np.log10(intervals[0]),
+            y2=-np.log10(intervals[1]),
+            color='lightgrey',
+            label=f'{int(100*confidence_interval)}% CI'
+        )
 
     lambda_gc_dict = {}
 
     if maf_bins is None:
-        exp = get_expected(n=n)
-        rank = np.sort(df[nlog10pval_field])
-        ax.scatter(
-            exp, 
-            rank, 
-            label='Observed', 
-            **scatter_kwargs
-        )
+        obs = np.sort(df[nlog10pval_field])
+        if effect_field is None:
+            ax.scatter(
+                exp, 
+                obs, 
+                label=label, 
+                **scatter_kwargs
+            )
+        else:
+            # Plot up and down triangles to indicate direction of effect
+            is_neg = df.sort_values(nlog10pval_field)[effect_field]<0
+            for label, marker, is_sign in [
+                (r'$\beta ≥ 0$','^', ~is_neg),
+                (r'$\beta < 0$', 'v', is_neg)
+            ]:
+                ax.scatter(
+                    exp[is_sign], 
+                    obs[is_sign], 
+                    label=label, 
+                    marker=marker,
+                    **scatter_kwargs
+                )
     else:
         if print_maf_bin_counts: print('MAF bin variant counts:')
         for i, (maf_min, maf_max) in enumerate(maf_bins):
-            df_tmp = df[(df.maf>maf_min)&(df.maf<=maf_max)]
+            df_tmp = df[(df['maf']>maf_min)&(df['maf']<=maf_max)]
             maf_range_str = f'({maf_min}, {maf_max}]'
             if print_maf_bin_counts: 
                 print(f'* {maf_range_str}: {len(df_tmp)} ({100*len(df_tmp)/len(df):.1f}%)')
@@ -162,14 +185,14 @@ def plot_qq(df, nlog10pval_field = 'nlog10pval', maf_bins=None, logscale=False,
             exp_tmp = get_expected(n_tmp)
             rank_tmp = np.sort(df_tmp[nlog10pval_field])
 
-            lambda_gc_tmp = get_lambda_gc(chisq_vec=df_tmp['chisq'])
+            lambda_gc_tmp = get_lambda_gc(chisq_vec=df_tmp[chi2_field], quantile=lambda_gc_quantile)
             lambda_gc_dict[maf_range_str] = lambda_gc_tmp
 
             ax.scatter(
                 exp_tmp,
                 rank_tmp,
                 color=plt.cm.viridis(i/(len(maf_bins)-0.5)),
-                label=f'MAF:({maf_min}, {maf_max}]'+r', $\lambda_{GC}=$'+f'{lambda_gc_tmp:.2e}',
+                label=f'MAF:({maf_min}, {maf_max}]'+r', $\lambda_{GC}=$'+f'{lambda_gc_tmp:.3g}',
                 **scatter_kwargs
             )
 
@@ -183,29 +206,35 @@ def plot_qq(df, nlog10pval_field = 'nlog10pval', maf_bins=None, logscale=False,
     if legend:
         ax.legend(loc='upper left')
     
-    gene_labels=[]
-    if maf_bins is None and n_top_genes_to_label>0:
-        gene_labels += add_labels(
-            x=exp[-n_top_genes_to_label:],
-            y=rank[-n_top_genes_to_label:],
-            labels= df.sort_values(by=nlog10pval_field)['gene_symbol'].values[-n_top_genes_to_label:], 
+    labels=[]
+    if maf_bins is None and n_top_results_to_label>0:
+        labels += add_labels(
+            x=exp[-n_top_results_to_label:],
+            y=obs[-n_top_results_to_label:],
+            labels= df.sort_values(by=nlog10pval_field)[label_field].values[-n_top_results_to_label:], 
             ax=ax, 
         )
     
-    if len(gene_labels)>0:
+    if len(labels)>0:
         ymin, ymax = ax.get_ylim()
         ax.set_ylim([ymin, ymax*1.2])
         adjust_text(
-            texts=gene_labels, 
+            texts=labels, 
             ax=ax, 
             autoalign=True,
-            arrowprops=dict(arrowstyle='->', color='black')
+            arrowprops=dict(arrowstyle='-', color='lightgrey')
         )
 
     
-    if assoc=='variant':
-        lambda_gc_dict['all'] = get_lambda_gc(chisq_vec=df['chisq'])
-        title += r'$\lambda_{GC}='+f'{lambda_gc_dict["all"]:.2e}$'
+    if (assoc=='variant') and chi2_field is None:
+        chi2_field = 'chisq'
+
+    if chi2_field is not None:
+        lambda_gc_dict['all'] = get_lambda_gc(chisq_vec=df[chi2_field], quantile=lambda_gc_quantile)
+        title += r'$\lambda_{GC}$'+(f'({lambda_gc_quantile})' if lambda_gc_quantile != 0.5 else '')
+        lambda_gc_str = f'{lambda_gc_dict["all"]:.2e}' if lambda_gc_dict["all"]<0.01 else f'{lambda_gc_dict["all"]:.3f}'
+        title += f'={lambda_gc_str}'
+        
     ax.set_title(title)
 
     return df, lambda_gc_dict
@@ -385,12 +414,14 @@ def plot_maf_vs_effect(df, log_yscale=False, title='', ax=None, scatter_kwargs={
 
 # +
 def get_genes_with_pos(csq):
+    """Get GRCh38 position of genes using mean position of all annotated variants in the gene
+    """
     csq = csq.copy()
     if 'gene_id' not in csq.columns:
         csq = csq.rename(columns={'Region':'gene_id'})
     csq['position'] = csq['MarkerID'].str.split(':', expand=True)[1].astype(int)
     genes_with_pos = csq[['gene_id','position']].groupby('gene_id').mean().reset_index()
-    print(f'WARNING: This uses GRCh38 gene positions. Only use for GRCh37 (e.g. imputed v3 data) as an approximation')
+    print(f'WARNING: This uses GRCh38 gene positions. Do not use for GRCh37 (e.g. imputed v3 data) unless as an approximation')
     return genes_with_pos
 
 def add_gene_position(df, genes_with_pos):
@@ -405,7 +436,7 @@ def add_gene_position(df, genes_with_pos):
 # -
 
 def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log_yscale=False, title='',
-    ax=None, n_top_genes_to_label=0, chrom_padding=5e7, colors=COLORS):
+    ax=None, n_top_genes_to_label=0, chrom_padding=5e7, colors=COLORS, gene_label_fontsize=None, pval_threshold=0.05/20e3):
     
     start_bp = 0
     mid = []
@@ -419,7 +450,7 @@ def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log
     for i, chrom in enumerate(range(1, 24)):
         if chrom==23: chrom='X'
 
-        gwas = df[df.CHR.astype(str)==str(chrom)]
+        gwas = df[df['chrom'].astype(str)==str(chrom)]
         if len(gwas)==0:
             continue
         gwas['plot_position'] = gwas['position']+start_bp
@@ -437,7 +468,7 @@ def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log
         chrom_list.append(chrom)
 
     left, right = ax.get_xlim()
-    ax.plot([left, right], [-np.log10(0.05/20e3)]*2, 'k--') # 20k genes
+    ax.plot([left, right], [-np.log10(pval_threshold)]*2, 'k--') # 20k genes
     #     plt.plot([left, right], [-np.log10(0.05/df['p.value'].notna().sum())]*2, 'k--', alpha=0.2)
     ax.set_xticks(mid)
     ax.set_xticklabels(chrom_list)
@@ -457,6 +488,7 @@ def plot_gene_manhattan(df, nlog10pval_field = 'nlog10Pvalue', min_maf=1e-6, log
             y=plot_df[nlog10pval_field].values[:n_top_genes_to_label],
             labels= plot_df.sort_values(by=nlog10pval_field, ascending=False)['gene_symbol'].values[:n_top_genes_to_label], 
             ax=ax, 
+            fontsize=gene_label_fontsize
         )
 
     if len(gene_labels)>0:
@@ -555,14 +587,20 @@ def plot_field_comparison(df1, df2, field='nlog10pval', xlabel='Pheno1', ylabel=
     
     return both_phenos
 
-def create_custom_legend(pip_thresh, wes_pval_thresh, wes_maf_thresh, group_test, gene_pval_thresh):
-    from matplotlib.lines import Line2D
+# def create_custom_legend(pip_thresh, wes_pval_thresh, wes_maf_thresh, group_test, gene_pval_thresh):
+#     from matplotlib.lines import Line2D
     
-    imputed = Line2D([0], [0], linestyle='', marker='o', label=f'Fine-mapped imputed data (PIP>={pip_thresh})', color='tab:blue')
-    wes_variant = Line2D([0], [0], linestyle='', marker='o', label=f'WES coding non-syn ($P$<{wes_pval_thresh}, MAF<{wes_maf_thresh})', color='tab:orange')
-    wes_gene = Line2D([0], [0], linestyle='', marker='o', label=f'Gene burden test ({group_test} $P$<{gene_pval_thresh})', color='tab:green')
+#     for label, threshold, color in (
+#         [f'Fine-mapped imputed data (PIP>={pip_thresh})', pip_thresh, 'tab:blue'],
+        
+#         [f'WES coding non-syn ($P$<{wes_pval_thresh}, MAF<{wes_maf_thresh})', wes_pval_thresh, 'tab:green']
+        
+        
+#     imputed = Line2D([0], [0], linestyle='', marker='o', label=f'Fine-mapped imputed data (PIP>={pip_thresh})', color='tab:blue')
+#     wes_variant = Line2D([0], [0], linestyle='', marker='o', label=f'WES coding non-syn ($P$<{wes_pval_thresh}, MAF<{wes_maf_thresh})', color='tab:orange')
+#     wes_gene = Line2D([0], [0], linestyle='', marker='o', label=f'Gene burden test ({group_test} $P$<{gene_pval_thresh})', color='tab:green')
 
-    plt.legend(handles=[imputed, wes_variant, wes_gene])
+#     plt.legend(handles=[imputed, wes_variant, wes_gene])
     
 def plot_trumpet(df_dict, gwas_id, pip_thresh = 0.99, wes_pval_thresh = 5e-8, wes_maf_thresh = 0.01, 
                  gene_pval_thresh = 0.05/20e3, group_test='pLoF;damaging_missense', pval_burden_field='Pvalue_Burden', 
@@ -653,10 +691,13 @@ def plot_trumpet(df_dict, gwas_id, pip_thresh = 0.99, wes_pval_thresh = 5e-8, we
     
 def plot_regeneron_trumpet(df_dict, phenotype_group, gwas_id, pip_thresh = 0.90, imputed_data_pval_thresh=5e-8, 
                  gene_pval_thresh = 0.05/20e3, group_tests=['pLoF','pLoF;damaging_missense'], pval_burden_field='Pvalue_Burden', 
-                 max_maf = 0.01, beta_burden_field='BETA_burden_duncan', nlog10pval_burden_field='nlog10Pvalue_Burden',
+                 max_maf = 0.01, beta_burden_field='BETA_burden_unweighted', nlog10pval_burden_field='nlog10Pvalue_Burden',
                  include_legend=True, figsize=(6,6), title='', include_gene_labels=True, yticks_list=[], n_imputed_gene_labels=0,
                  beta_scaling=1, ylabel='Effect size', axis_zoom=0, dpi=500, savefig=False):
-    
+    """
+    Format of gwas_id:
+        gwas_id = f'{pheno}-{pop}-{sex}'
+    """
     imputed_gwas_id = f'{gwas_id}-imputed'
     imputed_gwas = df_dict[imputed_gwas_id]
     imputed_gwas['beta_minor_allele'] = get_effect_size_of_minor_allele(imputed_gwas)
@@ -776,6 +817,21 @@ def plot_regeneron_trumpet(df_dict, phenotype_group, gwas_id, pip_thresh = 0.90,
     
     plt.show()
     
-    
+def line_break_text(text, max_length):
+    words, lines, line = text.split(), [], ""
+
+    for word in words:
+        if len(line) + len(word) + 1 > max_length:
+            lines.append(line)
+            line = word
+        else:
+            line += (" " if line else "") + word
+
+    lines.append(line)  # Add the last line
+    return "\n".join(lines)
+
+
 if __name__=='__main__':
     pass
+
+

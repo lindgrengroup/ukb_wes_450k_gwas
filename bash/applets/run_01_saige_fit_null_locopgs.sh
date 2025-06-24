@@ -12,48 +12,13 @@ saige_data_dir="/saige_pipeline/data"
 pop="eur"
 
 # [OPTION] phenotype_group:
-# - "obesity"
-# - "qced_biomarkers"
-# - "parkinsons"
-# - "qced_biomarkers_tail_status_quantile"
-# - "qced_biomarkers_tail_status_quantile_midfrac0.683"
-# - "smoking"
-# - "infertility"
-# - "hormone"
-# - "longitudinal"
-# - "obesity_proteomics"
-# - "biomarker_mahalanobis"
-# - "proteomics_v1"
-# - "mahalanobis_v2_continuous" # DEPRECATED (used Hawkes et al. covariates, only PC1-5, sex, age)
-# - "prs_as_covariate_v1" # Using genomics PLC 'Standard PRS' (trained on non-UKB data)
-# - "prs_as_covariate_v2" # Using PRS-CS on our own GWAS of UKB imputed data
-# - "prs_v2" # For directly testing the PGS as the dependent variable instead of using it as a covariate
-# - "prs_as_covariate_v3" # Using genomics PLC 'Enhanced PRS' (informed by UKB data)
-# - "mahalanobis_v2_1_irnt" # Covariate-residualized phenotypes, then IRNT-ed
-# - "mahalanobis_v2_1_irnt_stdresid" # Covariate-residualized phenotypes, then IRNT-ed, then (genomics PLC standard PRS) regressed out
-# - "mahalanobis_v2_1_irnt_lower_vs_inlier" # Outlier classication, Mahalanobis alpha=0.001 (cases=lower outlier, controls=inliers)
-# - "mahalanobis_v2_1_irnt_upper_vs_inlier" # Outlier classication, Mahalanobis alpha=0.001 (cases=upper outlier, controls=inliers)
-# - standard_prs # genomics PLC standard PRS
-# - standard_prs_controls # genomics PLC standard PRS for disease controls
-# - icd10_disease
-# - "mahalanobis_v2_1_irnt_alpha0.01_lower_vs_inlier" # Outlier classication (cases=lower outlier, controls=inliers), with Mahalanobis pval<0.01
-# - "mahalanobis_v2_1_irnt_alpha0.01_upper_vs_inlier" # Outlier classication (cases=upper outlier, controls=inliers), with Mahalanobis pval<0.01
-# - "original_phenos" # Original phenotypes corresponding to genomics PLC Standard PRS
-# - "original_phenos_unrelated" # Original phenotypes corresponding to genomics PLC Standard PRS, filtered to unrelated set (excluding related samples of 3rd degree or higher)
-# - "standardprs_covariateresid" - standard PRS, stratified by disease status, with covariates residualised out
-# - "standardprs_covariateresid_unrelated" - standard PRS, stratified by disease status, with covariates residualised out, individuals 3rd degree or closer (relatedness > 2^(-3.5) removed with greedy algorithm
-phenotype_group="qced_biomarkers"
+# - "locoprs_as_covariate_v2" # Using LOCO PRS-CS on our own GWAS of UKB imputed data as a covariate
+phenotype_group="locoprs_as_covariate_v2"
 
 # [OPTION] trait_type:
 # - "binary"
 # - "quantitative"
 trait_type="quantitative"
-
-if [[ ${phenotype_group} == *"_vs_inlier" ]]; then 
-  trait_type="binary" # For redundancy
-elif [[ ${phenotype_group} == "icd10_disease" ]]; then
-  trait_type="binary"
-fi
 
 
 # [OPTION] use_irnt:
@@ -61,16 +26,6 @@ fi
 # - "true" DEFAULT
 # - "false" 
 use_irnt="true" ## true"
-
-if [[ "${phenotype_group}" == "mahalanobis_v2_1_"* ]]; then
-  use_irnt="false" # Override to ensure IRNT is not used
-elif [[ "${phenotype_group}" == "biomarker_mahalanobis" ]]; then
-  use_irnt="false" # Override to ensure IRNT is not used
-elif [[ "${phenotype_group}" == "standard_prs" ]]; then
-  use_irnt="false" # Override to ensure IRNT is not used
-elif [[ "${phenotype_group}" == "standardprs_covariateresid"* ]]; then
-  use_irnt="false" # Override to ensure IRNT is not used
-fi
 
 
 # [INPUT] Sparse GRM
@@ -81,9 +36,9 @@ sparse_grm_samples="${sparse_grm}.sampleIDs.txt"
 plink_for_vr_bfile="${saige_data_dir}/00_set_up/ukb_array.wes_450k_qc_pass_${pop}.for_vr" 
 
 # [INPUT] Pheno list
-if [[ "${phenotype_group}" == *"qced_biomarkers"* ]] && [[ "${phenotype_group}" != "qced_biomarkers" ]]; then
+if [[ "${phenotype_group}" == *"qced_biomarkers"* ]]; then
   # Always use the same list of biomarkers, with no suffixes related to tail status
-  phenos=( $( dx cat "${saige_data_dir}/phenotypes/phenotype_list.biomarkers.txt" ) )
+  phenos=( $( dx cat "${saige_data_dir}/phenotypes/phenotype_list.qced_biomarkers.txt" ) )
 else
   phenos=( $( dx cat "${saige_data_dir}/phenotypes/phenotype_list.${phenotype_group}.txt" ) )
 fi
@@ -119,14 +74,6 @@ sex="both_sexes"
   if [[ ${phenotype_group} == "infertility" ]]; then
     covar_col_list="assessment_centre,age,age2,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21"
     qcovar_col_list="assessment_centre"
-  elif [[ ${phenotype_group} == "mahalanobis_v2_1_"* || ${phenotype_group} == "standardprs_covariateresid"* ]]; then
-    # NOTE: These phenotypes have already had all other covariates regressed out of them
-    covar_col_list="sequencing_tranche"
-    qcovar_col_list="sequencing_tranche"
-  elif [[ ${phenotype_group} == "standard_prs" ]]; then
-    # Use for evaluating pure association between phenotype and PRS without covariates
-    covar_col_list=""
-    qcovar_col_list=""
   else
     covar_col_list="age,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10,pc11,pc12,pc13,pc14,pc15,pc16,pc17,pc18,pc19,pc20,pc21,age2,assessment_centre,sequencing_tranche${sex_covar_col_list}"
     qcovar_col_list="assessment_centre,sequencing_tranche${sex_qcovar_col_list}"
@@ -162,26 +109,17 @@ sex="both_sexes"
     # tail_type="_qced_is_${tail}_tail_quantile0.01_midfrac0.683"
   tail_type=""
   
-  # NOTE: pheno_idx is 0-indexed
-  for pheno_idx in `seq 0 $(( n_phenos - 1))`; do
-  #for pheno_idx in `seq 501 1458`; do # TEMPORARY - only used for proteomics_v1
-  #for pheno_idx in {1..1}; do
+  for loco_chrom in {13..22}; do
   
-    pheno_col="${phenos[$pheno_idx]}${tail_type}"
-
-    if [[ ${phenotype_group} == "original_phenos" ]]; then
-      if [[ ${pheno_col} == "t2d" ]] || [[ ${pheno_col} == "cad" ]] || [[ ${pheno_col} == "osteoporosis" ]]; then
-        trait_type="binary"
-      else
-        trait_type="quantitative"
-      fi
-    fi
+    pheno_col="whr_adj_bmi" #${phenos[$pheno_idx]}${tail_type}"
 
     # Include PRS as covariate if phenotype group is "prs_as_covariate"
     if [[ ${phenotype_group} == "prs_as_covariate_v1" ]] || [[ ${phenotype_group} == "prs_as_covariate_v3" ]] ; then
       final_covar_col_list="${covar_col_list},prs_${pheno_col}"
     elif [[ ${phenotype_group} == "prs_as_covariate_v2" ]]; then
       final_covar_col_list="${covar_col_list},pgs_${pheno_col}"
+    elif [[ ${phenotype_group} == "locoprs_as_covariate_v2" ]]; then
+      final_covar_col_list="${covar_col_list},locopgs_${pheno_col}_c${loco_chrom}"
     else
       final_covar_col_list=${covar_col_list}
     fi
@@ -193,7 +131,7 @@ sex="both_sexes"
     #fi
   
     # [OUTPUT] Output file names
-    gwas_id="${pheno_col}-${pop}-${sex}"
+    gwas_id="${pheno_col}_loco${loco_chrom}-${pop}-${sex}"
 
     # TEMPORARY
     # Used for testing isLowMemLOCO
@@ -206,7 +144,7 @@ sex="both_sexes"
     # Check if output file exists
     if [ $( dx ls -l ${results_files}* 2> /dev/null | wc -l  ) -ne 2 ]; then
     #if [ true ]; then # TEMPORARY - used to save time
-      echo "Starting ${gwas_id} (pheno_idx=${pheno_idx})"
+      echo "Starting ${gwas_id}"
       dx run 01_saige_fit_null \
         -iplink_for_vr_bed="${plink_for_vr_bfile}.bed" \
         -iplink_for_vr_bim="${plink_for_vr_bfile}.bim" \
@@ -224,7 +162,7 @@ sex="both_sexes"
         --name="01_saige_fit_null${model_suffix}-${gwas_id}" \
         --destination "${out_dir}" \
         --brief \
-        --priority="high" \
+        --priority="low" \
         -y
   
     else

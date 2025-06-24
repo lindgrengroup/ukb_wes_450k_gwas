@@ -8,12 +8,12 @@ main() {
 
     ## Set up directories
     WD=$( pwd )
-    mkdir plink_files
     mkdir -p out/{gene_assoc,marker_list,variant_assoc,log_file}
     
-    dx-mount-all-inputs --except group_file --except bim
-    
+    dx-mount-all-inputs --except bed --except bim
+    dx download "$bed" -o "${WD}/bfile.bed"
     dx download "$bim" -o "${WD}/bfile.bim"
+    
     if [ $( head -1 bfile.bim | cut -f1 ) = "X" ]; then 
       # If chrX, need to fill in missing varids
       awk '{
@@ -33,17 +33,17 @@ main() {
     dx download "${group_file}" -o "group_file.gz"
     gunzip -c group_file.gz > "${WD}/group_file.txt"
 
-    # Download saige-1.1.6.3.tar.gz docker image from ukbb_meta/docker/
-    dx download file-GK53YGjJg8JX4yqg925zY7x5
-    docker load --input saige-1.1.6.3.tar.gz
+    # NOTE: Started using v1.1.9 on 2023-07-18. SAIGE v1.1.8 is the first version that works correctly for case-control traits.
+    # Previously I was using v1.1.6.3 (and before that, v1.1.6.1)
+    docker pull wzhou88/saige:1.1.9
 
     ## Run script
     docker run \
       -e HOME=${WD}  \
       -v ${WD}/:$HOME/ \
-      wzhou88/saige:1.1.6.3 \
+      wzhou88/saige:1.1.9 \
       step2_SPAtests.R  \
-        --bedFile ${HOME}/in/bed/* \
+        --bedFile ${HOME}/bfile.bed \
         --bimFile ${HOME}/bfile.bim \
         --famFile ${HOME}/in/fam/* \
         --LOCO FALSE  \
@@ -55,7 +55,7 @@ main() {
         --sparseGRMFile ${HOME}/in/sparse_grm/*  \
         --sparseGRMSampleIDFile ${HOME}/in/sparse_grm_samples/* \
         --groupFile ${HOME}/group_file.txt \
-        --annotation_in_groupTest "pLoF,damaging_missense,synonymous,pLoF:damaging_missense,pLoF:damaging_missense:synonymous" \
+        --annotation_in_groupTest "pLoF,damaging_missense,other_missense,synonymous,pLoF:damaging_missense,pLoF:damaging_missense:other_missense:synonymous" \
         --maxMAF_in_groupTest 0.0001,0.001,0.01 \
         --is_output_markerList_in_groupTest TRUE \
         --is_single_in_groupTest TRUE \

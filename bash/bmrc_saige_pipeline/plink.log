@@ -1,0 +1,12 @@
+PLINK v1.90b6.21 64-bit (19 Oct 2020)
+Options in effect:
+  --memory 10G
+
+Hostname: rescomp1.hpc.in.bmrc.ox.ac.uk
+Working directory: /gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/bash/bmrc_saige_pipeline
+Start time: Tue May 16 15:11:07 2023
+
+Error: Invalid --memory parameter '10G'.
+For more information, try "plink --help <flag name>" or "plink --help | more".
+
+End time: Tue May 16 15:11:07 2023

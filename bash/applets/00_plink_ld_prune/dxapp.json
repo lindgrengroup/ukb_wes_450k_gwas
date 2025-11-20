@@ -1,0 +1,62 @@
+{
+  "name": "00_plink_ld_prune",
+  "title": "00_plink_ld_prune",
+  "summary": "Parallelized PLINK LD prune across chromosomes",
+  "dxapi": "1.0.0",
+  "version": "0.0.1",
+  "inputSpec": [
+    {
+      "name": "genotype_array_bfile",
+      "label": "PLINK bfile prefix for genotype array files",
+      "class": "string",
+      "help": "UKB PLINK bfile file prefixes for genotype array data. Use '#CHROM#' in place of chromosome ID"
+    },
+    {
+      "name": "samples_w_superpop",
+      "label": "Sample IDs with superpop label",
+      "class": "string",
+      "patterns": [
+        "*.tsv"
+      ],
+      "help": "List of: Sample IDs in column 1, superpopulation label in column 2"
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "merged_ld_pruned",
+      "class": "file",
+      "label": "Merged pruned files",
+      "patterns": [
+        "*.bed",
+        "*.bim",
+        "*.fam"
+      ],
+      "help": ""
+    }
+  ],
+  "access": {
+    "network": ["s3.amazonaws.com"]
+  },
+  "runSpec": {
+    "interpreter": "bash",
+    "file": "src/main.sh",
+    "timeoutPolicy": {
+      "*": {
+        "hours": 1
+      }
+    },
+    "systemRequirements": {
+      "main": {
+        "instanceType": "mem1_ssd1_v2_x2"
+      },
+      "ld_prune": {
+        "instanceType": "mem1_ssd1_v2_x2"
+      },
+      "merge_bfiles": {
+        "instanceType": "mem1_ssd1_v2_x2"
+      }
+    },
+    "distribution": "Ubuntu",
+    "release": "14.04"
+  }
+}

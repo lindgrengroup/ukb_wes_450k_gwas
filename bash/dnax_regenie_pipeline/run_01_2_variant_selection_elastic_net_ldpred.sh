@@ -4,14 +4,18 @@
 # CONFIGURATION
 # -------------------------------------------------------------------
 # Mode: "elastic_net" or "ldpred2"
-#MODE="elastic_net"
-MODE="ldpred2"
-
+MODE="elastic_net"
+#MODE="ldpred2"
 
 # Set the target GENE here
 GENE="$1"
 
-RADIUS=1000000
+# Random Seed: Set an integer (e.g. 42) or leave empty for random.
+SEED=$2
+
+#RADIUS=1000000
+RADIUS=2000000
+
 PHENO_FILE="/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.standardprs_unrelated_covariateresid_v2_2.tsv.gz"
 GFF_PATH="/mnt/project/resources/ensembl/Homo_sapiens.GRCh37.87.gff3.gz"
 DNAX_DIR="/mnt/project/nbaya/outliers/data/imputed_v3_condition_variants/condition_pgen"
@@ -46,9 +50,6 @@ echo "Configuration: Gene=$GENE -> Phenotype=$PHENO_COL"
 #TEST_SAMPLES=1000
 TEST_SAMPLES="" # If null, do full run
 
-# Random Seed: Set an integer (e.g. 42) or leave empty for random.
-SEED=$2
-
 # Output location
 PROJECT_OUT_DIR="/nbaya/outliers/data/imputed_v3_condition_variants/lasso_elastic_net/"
 # Location to store the script on DNAnexus
@@ -58,7 +59,7 @@ SCRIPT_REMOTE_DIR="/nbaya/outliers/scripts/"
 # 1. UPLOAD R SCRIPT
 # -------------------------------------------------------------------
 R_SCRIPT_NAME="variant_selection_elastic_net_ldpred.R"
-LOCAL_SCRIPT_PATH="/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_misaligned/R/${R_SCRIPT_NAME}"
+LOCAL_SCRIPT_PATH="/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/R/${R_SCRIPT_NAME}"
 REMOTE_SCRIPT_PATH="${SCRIPT_REMOTE_DIR}${R_SCRIPT_NAME}"
 
 echo "Uploading R script to $REMOTE_SCRIPT_PATH ..."
@@ -126,5 +127,6 @@ dx run swiss-army-knife \
    " \
    --instance-type "mem1_ssd1_v2_x16" \
    --destination "$PROJECT_OUT_DIR" \
+   --priority "high" \
    --brief \
    --yes

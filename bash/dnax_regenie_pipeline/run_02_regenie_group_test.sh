@@ -81,12 +81,20 @@ if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
   read -r CONDITION_CHROM_IMPUTED START_POS STOP_POS <<< "$gene_coords"
   echo "Found ${CONDITION_GENE_IMPUTED} at ${CONDITION_CHROM_IMPUTED}:${START_POS}-${STOP_POS}"
 
-  ## Radius of conditioning window, added upstream and downstream of gene start/stop coordinates
-  ## Measured in base pairs
-#   RADIUS=0 # Minimal
+  # Radius of conditioning window, added upstream and downstream of gene start/stop coordinates
+  # Measured in base pairs
+  # RADIUS=0 # Minimal
   # RADIUS=1000000 # Default
-#   RADIUS=1500000 # Extended
+  # RADIUS=1500000 # Extended
   RADIUS=2000000 # Extended more
+
+  # Whether to use all variants in conditioning window or a subset (e.g. selected by elastic net)
+  # Options:
+  # - "all" : All variants in conditioning window
+  # - "elasticnet_seed<SEED NUMBER>" : Use variants selected by elastic net regression of PRS against imputed variants in window (e.g. "elasticnet_seed1")
+  #CONDITION_VARIANT_SUBSET="all"
+  CONDITION_VARIANT_SUBSET="elasticnet_seed1"
+  #CONDITION_VARIANT_SUBSET="elasticnet_seed2"
   
   # Directory of files of variants lists to condition on
   CONDITION_LIST_DIR="/mnt/project/nbaya/outliers/data/imputed_v3_condition_variants"
@@ -106,15 +114,20 @@ if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
 #   CONDITION_FILE_SAMPLE_FILENAME="${CONDITION_FILE_SAMPLE_MNT_PATH##*/}" # This gets just the filename
   
   # Path to file containing variants (rsid/CHR:POS_REF_ALT if imputed v3; chrCHR:POS:REF:ALT if WES 450k) to condition on (uses --condition-list)
-  # CONDITION_LIST_FILE="${CONDITION_LIST_DIR}/imputed_v3_bgen_variants.HMGCR.radius1500000bp.alternate_ids.txt"
-  # CONDITION_LIST_FILE="${CONDITION_LIST_DIR}/imputed_v3_bgen_variants.HMGCR.radius1500000bp.rsid.head5000.txt"
-  CONDITION_LIST_FILE="tmp-${CONDITION_FILE_MNT_PATH##*/}.txt" # This gets just the filename for the condition pgen prefix and appends ".txt"
-  
-  
-#   echo "WARNING: CONDITION_ENSGID and CONDITION_CHROM_IMPUTED are hard coded for HMGCR"
-  
-  
+  if [[ "${CONDITION_VARIANT_SUBSET}" == "all" ]]; then
+    CONDITION_LIST_FILE="tmp-${CONDITION_FILE_MNT_PATH##*/}.txt" # This gets just the filename for the condition pgen prefix and appends ".txt"
+  elif [[ "${CONDITION_VARIANT_SUBSET}" == "elasticnet"* ]]; then
+    # Extract seed from CONDITION_VARIANT_SUBSET
+    ELASTIC_NET_SEED="${CONDITION_VARIANT_SUBSET##*seed}"
 
+    # Use list of variants selected by elastic net regression (PRS ~ imputed variants in conditioning window)
+    CONDITION_LIST_FILE="${CONDITION_LIST_DIR}/lasso_elastic_net/imputed_v3_qced_snps_maf0.001_hwe1e-10_info0.8_${CONDITION_GENE_IMPUTED}_radius${RADIUS}bp_chr${CONDITION_CHROM_IMPUTED}_selected_variants_seed${ELASTIC_NET_SEED}.txt"
+  else
+    echo "Error: Invalid CONDITION_VARIANT_SUBSET: ${CONDITION_VARIANT_SUBSET}" >&2
+    exit
+  fi
+elif [[ "${pheno_group}" == "standardprs_unrelated_covariateresid_v2_2"* ]]; then
+  echo "NOTE: Not conditioning on any variants"
 fi
 # -----------------------------------
 
@@ -217,10 +230,17 @@ for pheno_idx in {1..1}; do
       
       
       if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
-        out="${out}.conditiongene${CONDITION_GENE_IMPUTED}.radius${RADIUS}bp"
-        job_name="${job_name}_radius${RADIUS}bp_cond${CONDITION_GENE_IMPUTED}"
         destination="nbaya/regenie/data/step2/group_tests_conditioned/${pheno_group}/${anc}"
         instance_type="mem3_ssd1_v2_x16"
+        out+=".conditiongene${CONDITION_GENE_IMPUTED}.radius${RADIUS}bp"
+        job_name="${job_name}_radius${RADIUS}bp_cond${CONDITION_GENE_IMPUTED}"
+        
+        # If not conditioning on all variants, add suffixes to output and job name
+        if [[ "${CONDITION_VARIANT_SUBSET}" != "all" ]]; then
+          out+=".${CONDITION_VARIANT_SUBSET}"
+          job_name+="_${CONDITION_VARIANT_SUBSET}"
+        fi
+
       else
         destination="nbaya/regenie/data/step2/group_tests/${pheno_group}/${anc}"
       fi
@@ -229,8 +249,9 @@ for pheno_idx in {1..1}; do
       
       # ---  ---
       cmd_prefix=""
-      if [[ -n "${CONDITION_LIST_FILE}" ]]; then
+      if [[ -n "${CONDITION_LIST_FILE}" ]] && [[ "${CONDITION_VARIANT_SUBSET}" == "all" ]]; then
         # Create condition list file that includes all variant IDs from the condition pgen
+        # NOTE: Only do this if including all variants in conditioning window
         cmd_prefix="< ${CONDITION_FILE_MNT_PATH}.pvar grep -v '^#CHROM' | cut -f3 > ${CONDITION_LIST_FILE}; " 
       fi
     

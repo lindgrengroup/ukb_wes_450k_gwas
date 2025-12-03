@@ -127,4 +127,5 @@ mv *regenie ${OUT}.regenie
 
 gzip *regenie
 
-rm tmp-*
+# Include -f to avoid error if no "tmp-" files present
+rm -f tmp-*

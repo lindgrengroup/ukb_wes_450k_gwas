@@ -57,7 +57,7 @@ CURRENT_MFI_FILE=$(printf "${MFI_TEMPLATE}" "$CHR")
 # Mounted gzipped variant list path
 VARIANT_LIST_MNT_PATH="/mnt/project${DNAX_WD}/condition_window_variants/imputed_v3_bgen_variants.${GENE_SYMBOL}.radius${RADIUS}bp.chrposrefalt.txt.gz"
 OUTPUT_PREFIX="imputed_v3_qced_snps_${MAF_LABEL}_${HWE_LABEL}_${INFO_LABEL}_${GENE_SYMBOL}_radius${RADIUS}bp_chr${CHR}"
-JOB_NAME="filter_pgen_muyrápido_${GENE_SYMBOL}_chr${CHR}"
+JOB_NAME="filter_pgen_muyrápido_radius${RADIUS}bp_${GENE_SYMBOL}_chr${CHR}"
 
 # --- 5. Define the SAK Job Command ---
 read -r -d '' SCRIPT_CMD <<EOF

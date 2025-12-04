@@ -57,6 +57,7 @@ regenie \
   --extract "$EXTRACT" \
   --threads=${n_threads} \
   --bsize 1000 \
+  --ref-first \
   ${trait_flag} \
   --out $OUT
 

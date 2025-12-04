@@ -13,8 +13,8 @@ GENE="$1"
 # Random Seed: Set an integer (e.g. 42) or leave empty for random.
 SEED=$2
 
-#RADIUS=1000000
-RADIUS=2000000
+RADIUS=1000000
+#RADIUS=2000000
 
 PHENO_FILE="/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.standardprs_unrelated_covariateresid_v2_2.tsv.gz"
 GFF_PATH="/mnt/project/resources/ensembl/Homo_sapiens.GRCh37.87.gff3.gz"
@@ -25,17 +25,20 @@ case "$GENE" in
     "HNF1A"|"HNF4A"|"GCK")
         PHENO_COL="t2d_case_prs_resid"
         ;;
-    "APOB"|"PCSK9"|"ANGPTL3")
-        PHENO_COL="cad_ctrl_prs_resid"
-        ;;
     "LDLR")
         PHENO_COL="cad_case_prs_resid"
         ;;
-    "SLC30A8")
-        PHENO_COL="t2d_ctrl_prs_resid"
-        ;;
     "COL1A1"|"COL1A2")
         PHENO_COL="osteoporosis_case_prs_resid"
+        ;;
+    "SLC30A8"|"MSRA")
+        PHENO_COL="t2d_ctrl_prs_resid"
+        ;;
+    "APOB"|"PCSK9"|"ANGPTL3"|"HMGCR"|"ISL2"|"PNLDC1"|"HLA-DRB5")
+        PHENO_COL="cad_ctrl_prs_resid"
+        ;;
+    "NBPF3")
+        PHENO_COL="osteoporosis_ctrl_prs_resid"
         ;;
     *)
         echo "Error: No phenotype mapping found for gene $GENE"

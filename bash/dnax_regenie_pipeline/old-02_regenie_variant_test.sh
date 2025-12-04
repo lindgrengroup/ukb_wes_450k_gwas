@@ -16,31 +16,28 @@ OUT="$9" # Output prefix
 # - Pass genotype array QC
 KEEP="/mnt/project/nbaya/regenie/data/genotypes/ukb22418_b0_v2.autosomes.qced.${ANC}.id"
 
-# Create updated pred .list file
+# Remove output prefix from .loco file
 PRED_LOCAL="$HOME/tmp-predfile.txt"
-cat ${PRED} | sed 's/\/home\/dnanexus\/out\/out\///g' > ${PRED_LOCAL} # Remove output prefix from .loco file
+cat ${PRED} | sed 's/\/home\/dnanexus\/out\/out\///g' > ${PRED_LOCAL}
 PRED=${PRED_LOCAL}
 head $PRED
 
-
+PHENOFILE_DNAX="/mnt/project/nbaya/regenie/data/phenotypes/ukb.standing_height.20250508.tsv.gz"
 PHENOFILE_LOCAL="$HOME/tmp-phenofile.tsv"
-if [ "$PHENO_GROUP" = "Height" ] || [[ "$PHENO_GROUP" == "original_phenos"* ]] || [[ "$PHENO_GROUP" == "microalbumin_urine_qced" ]] || [[ "${PHENO_GROUP}" == "standard_prs_controls" ]] || [[ "${PHENO_GROUP}" == "standardprs_"*"covariateresid_v2_2"* ]]; then
-  gunzip -c $PHENOFILE_DNAX > $PHENOFILE_LOCAL
-elif [[ "$PHENO_GROUP" == "mahalanobis_v2_"* ]]; then
-  # Add FID field
-  gunzip -c $PHENOFILE_DNAX | awk '{ print $1,$0 }' | sed '1 s/^IID/FID/g' > $PHENOFILE_LOCAL
-else
-  echo "ERROR: Unrecognised PHENO_GROUP $PHENO_GROUP. Could not process PHENOFILE_DNAX into PHENOFILE_LOCAL." && exit 1
-fi
-echo "PHENOFILE_LOCAL"
+gunzip -c $PHENOFILE_DNAX > $PHENOFILE_LOCAL
 head $PHENOFILE_LOCAL
 
+COVARFILE_DNAX="/mnt/project/nbaya/regenie/data/phenotypes/ukb_brava_default_covariates.20250508.tsv.gz"
 COVARFILE_LOCAL="$HOME/tmp-covarfile.tsv"
-if [[ "${PHENOFILE_DNAX}" != "${COVARFILE_DNAX}" ]]; then
-  gunzip -c $COVARFILE_DNAX > $COVARFILE_LOCAL
-else
-  ln -s ${PHENOFILE_LOCAL} ${COVARFILE_LOCAL}
-fi
+gunzip -c $COVARFILE_DNAX > $COVARFILE_LOCAL
+
+#ANNOT_DIR="/mnt/project/nbaya/regenie/data/annotations"
+#readonly ANNO="${ANNOT_DIR}/regenie_annotations.chr${CHROM}.txt"
+#readonly SETLIST="${ANNOT_DIR}/regenie_setlist.chr${CHROM}.txt"
+#readonly MASK="${ANNOT_DIR}/regenie_masks.txt"
+
+trait_flag="--qt --apply-rint"
+#trait_flag="--bt --firth --approx --pThresh 0.1"
 
 # Define genotypes flag
 if [ ${GENOTYPES} == *.bed ]; then
@@ -67,7 +64,7 @@ regenie \
   ${genotypes_flag} \
   --phenoFile ${PHENOFILE_LOCAL} \
   --covarFile ${COVARFILE_LOCAL} \
-  ${flags} \
+  ${trait_flag} \
   --keep ${KEEP} \
   --pred $PRED \
   --minMAC 0.5 \
@@ -78,5 +75,4 @@ mv *regenie ${OUT}.regenie
 
 gzip *regenie
 
-# Include -f to avoid error if no "tmp-" files present
-rm -f tmp-*
+#rm tmp-*

@@ -2,17 +2,21 @@
 
 set -u # throws error if variables are undefined
 
-# Parse options
-# Iterate over all arguments passed to the script
-# Use format:
-# ./run_02_regenie_group_test.sh condition_gene_imputed=HMGCR
-for arg in "$@"; do
-  case $arg in
-    condition_gene_imputed=*)
-      CONDITION_GENE_IMPUTED="${arg#*=}"
-      ;;
-  esac
-done
+if [[ -n "$@" ]]; then 
+  # Parse options
+  # Iterate over all arguments passed to the script
+  # Use format:
+  # ./run_02_regenie_group_test.sh condition_gene_imputed=HMGCR
+  for arg in "$@"; do
+    case $arg in
+      condition_gene_imputed=*)
+        CONDITION_GENE_IMPUTED="${arg#*=}"
+        ;;
+    esac
+  done
+else
+  CONDITION_GENE_IMPUTED=""
+fi
 
 
 WD="/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/bash/dnax_regenie_pipeline"
@@ -31,22 +35,22 @@ upload_file ${script_local} ${script_dnax}
 anc="EUR" # Genetic ancestry group (e.g. "EUR", "AFR", "EAS", etc.)
 #for anc in {"AFR","EAS"}; do
 
-# readonly pheno_group="Height"
-#readonly pheno_group="mahalanobis_v2_2_irnt_upper_vs_inlier" # Aligned status (upper vs. inlier); v2.2 uses unrelated individuals; v2.1 uses all available individuals
-#readonly pheno_group="mahalanobis_v2_2_irnt_lower_vs_inlier" # Aligned status (lower vs. inlier); v2.2 uses unrelated individuals; v2.1 uses all available individuals
-#readonly pheno_group="original_phenos_qt" # Quantitative traits (the original phenotypes corresponding to those used in misaligned project)
-#readonly pheno_group="original_phenos_bt" # Dichotomous traits (the original phenotypes corresponding to those used in misaligned project)
-#readonly pheno_group="standardprs_covariateresid_v2_2_ctrls" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
-#readonly pheno_group="standardprs_covariateresid_v2_2_cases" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
-# readonly pheno_group="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
-readonly pheno_group="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
-#readonly pheno_group="microalbumin_urine_qced" # Only urine microalbumin (QCed following Sinott-Armstrong et al. procedure)
+# readonly PHENO_GROUP="Height" # For BRaVa
+#readonly PHENO_GROUP="mahalanobis_v2_2_irnt_upper_vs_inlier" # Aligned status (upper vs. inlier); v2.2 uses unrelated individuals; v2.1 uses all available individuals
+#readonly PHENO_GROUP="mahalanobis_v2_2_irnt_lower_vs_inlier" # Aligned status (lower vs. inlier); v2.2 uses unrelated individuals; v2.1 uses all available individuals
+#readonly PHENO_GROUP="original_phenos_qt" # Quantitative traits (the original phenotypes corresponding to those used in misaligned project)
+#readonly PHENO_GROUP="original_phenos_bt" # Dichotomous traits (the original phenotypes corresponding to those used in misaligned project)
+#readonly PHENO_GROUP="standardprs_covariateresid_v2_2_ctrls" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
+#readonly PHENO_GROUP="standardprs_covariateresid_v2_2_cases" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
+readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
+#readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
+#readonly PHENO_GROUP="microalbumin_urine_qced" # Only urine microalbumin (QCed following Sinott-Armstrong et al. procedure)
 
 # Variant annotation category
 ANNOT_VERSION="v6" # Default used for most of my thesis, including the obesity project
 #ANNOT_VERSION="v7" # BRaVa default as of Aug 2025
 
-# Get variables corresponding to `pheno_group`
+# Get variables corresponding to `PHENO_GROUP`
 source _load_variables_for_pheno_group.sh
 
 # Decide whether to use max MAF or max AAF
@@ -84,9 +88,9 @@ if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
   # Radius of conditioning window, added upstream and downstream of gene start/stop coordinates
   # Measured in base pairs
   # RADIUS=0 # Minimal
-  # RADIUS=1000000 # Default
+  RADIUS=1000000 # Default
   # RADIUS=1500000 # Extended
-  RADIUS=2000000 # Extended more
+  # RADIUS=2000000 # Extended more
 
   # Whether to use all variants in conditioning window or a subset (e.g. selected by elastic net)
   # Options:
@@ -126,7 +130,7 @@ if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
     echo "Error: Invalid CONDITION_VARIANT_SUBSET: ${CONDITION_VARIANT_SUBSET}" >&2
     exit
   fi
-elif [[ "${pheno_group}" == "standardprs_unrelated_covariateresid_v2_2"* ]]; then
+elif [[ "${PHENO_GROUP}" == "standardprs_unrelated_covariateresid_v2_2"* ]]; then
   echo "NOTE: Not conditioning on any variants"
 fi
 # -----------------------------------
@@ -156,13 +160,13 @@ if [[ -n "${CONDITION_LIST_FILE}" ]]; then
   fi
 fi
 
-PRED="regenie_step1_${anc}_${pheno_group}_pred.list"
+PRED="regenie_step1_${anc}_${PHENO_GROUP}_pred.list"
 STEP1_DIR="nbaya/regenie/data/step1/${anc}"
 PRED_PATH="${STEP1_DIR}/${PRED}"
 PRED_DNAX="/mnt/project/${STEP1_DIR}/${PRED}"
 
 # pheno_idx: One-indexed (i.e. starts with 1, ends with n)
-for pheno_idx in {1..1}; do
+for pheno_idx in {2..2}; do
 
   # Get phenotype column name (first column in pred file, in which each row is a different phenotype)
   pheno_col=$( dx cat ${PRED_PATH} | sed "${pheno_idx}q;d" | awk '{ print $1 }')
@@ -180,7 +184,7 @@ for pheno_idx in {1..1}; do
   
   # flags="${trait_flag} ${pheno_col_flag} ${covar_flag} ${af_flags} ${condition_flags}" # This is the old, unsafe method
 
-  LOCO="regenie_step1_${anc}_${pheno_group}_${pheno_idx}.loco"
+  LOCO="regenie_step1_${anc}_${PHENO_GROUP}_${pheno_idx}.loco"
   LOCO_PATH="${STEP1_DIR}/${LOCO}"
 
     for chrom in {1..23}; do
@@ -198,7 +202,7 @@ for pheno_idx in {1..1}; do
       bfile="ukb_wes_450k.qced.chr${chrom}"
       bfile_path="/Barney/wes/sample_filtered/${bfile}"
 
-      echo "Running REGENIE group test with ${bfile} for $anc $pheno_group $pheno_col"
+      echo "Running REGENIE group test with ${bfile} for $anc $PHENO_GROUP $pheno_col"
 
       # Allocate machine size based on size of bed file
       bed_size=$( dx ls -l "${bfile_path}.bed" 2> /dev/null | cut -f5 -d' ' )
@@ -225,12 +229,12 @@ for pheno_idx in {1..1}; do
       #fi
       priority="high"
 
-      out="regenie_group_test.${anc}.${pheno_group}.${pheno_col}.${ANNOT_VERSION}annot.max${MAF_OR_AAF}${AF_CUTOFF}.chr${chrom}"
-      job_name="regenie_group_test_${ANNOT_VERSION}_${anc}_${pheno_group}_${pheno_col}_c${chrom}"
+      out="regenie_group_test.${anc}.${PHENO_GROUP}.${pheno_col}.${ANNOT_VERSION}annot.max${MAF_OR_AAF}${AF_CUTOFF}.chr${chrom}"
+      job_name="regenie_group_test_${ANNOT_VERSION}_${anc}_${PHENO_GROUP}_${pheno_col}_c${chrom}"
       
       
       if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
-        destination="nbaya/regenie/data/step2/group_tests_conditioned/${pheno_group}/${anc}"
+        destination="nbaya/regenie/data/step2/group_tests_conditioned/${PHENO_GROUP}/${anc}"
         instance_type="mem3_ssd1_v2_x16"
         out+=".conditiongene${CONDITION_GENE_IMPUTED}.radius${RADIUS}bp"
         job_name="${job_name}_radius${RADIUS}bp_cond${CONDITION_GENE_IMPUTED}"
@@ -242,7 +246,7 @@ for pheno_idx in {1..1}; do
         fi
 
       else
-        destination="nbaya/regenie/data/step2/group_tests/${pheno_group}/${anc}"
+        destination="nbaya/regenie/data/step2/group_tests/${PHENO_GROUP}/${anc}"
       fi
       
       dx mkdir -p ${destination}
@@ -254,14 +258,14 @@ for pheno_idx in {1..1}; do
         # NOTE: Only do this if including all variants in conditioning window
         cmd_prefix="< ${CONDITION_FILE_MNT_PATH}.pvar grep -v '^#CHROM' | cut -f3 > ${CONDITION_LIST_FILE}; " 
       fi
-    
+
       dx run swiss-army-knife \
       	-iin="${script_dnax}" \
         -iin="${bfile_path}.bed" \
         -iin="${bfile_path}.bim" \
         -iin="${bfile_path}.fam" \
         -iin=${LOCO_PATH} \
-      	-icmd="${cmd_prefix} bash ${script} ${bfile}.bed ${anc} ${pheno_group} ${PRED_DNAX} ${pheno_col} ${PHENOFILE_DNAX} ${COVARFILE_DNAX} \"${flags_string}\" ${MAF_OR_AAF} ${ANNOT_VERSION} ${chrom} ${out}" \
+      	-icmd="${cmd_prefix} bash ${script} ${bfile}.bed ${anc} ${PHENO_GROUP} ${PRED_DNAX} ${pheno_col} ${PHENOFILE_DNAX} ${COVARFILE_DNAX} \"${flags_string}\" ${MAF_OR_AAF} ${ANNOT_VERSION} ${chrom} ${out}" \
       	--name="$job_name" \
       	--instance-type "$instance_type" \
       	--priority="$priority" \

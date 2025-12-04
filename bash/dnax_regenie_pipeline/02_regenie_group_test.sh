@@ -2,7 +2,7 @@
 
 GENOTYPES="$1" # Exome sequencing PLINK bed file (*.bed) or bgen (*.bgen) prefix
 ANC="$2" # Genetic ancestry group (e.g. "EUR", "AFR", "EAS", etc.)
-pheno_group="$3"
+PHENO_GROUP="$3"
 PRED="$4" # .list file created by REGENIE step 1
 PHENOCOL="$5" # Phenotype column
 PHENOFILE_DNAX=$6
@@ -13,16 +13,6 @@ ANNOT_VERSION=${10} # Either "v6" or "v7"
 CHROM="${11}" # Chromosome
 OUT="${12}" # Output prefix
 
-# # --- START DEBUG BLOCK ---
-# echo "--- Checking arguments ---"
-# echo "7 (COVARFILE_DNAX): $7"
-# echo "8 (flags): $8"
-# echo "9 (MAF_OR_AAF): $9"
-# echo "10 (ANNOT_VERSION): ${10}"
-# echo "11 (CHROM): ${11}"
-# echo "12 (OUT): ${12}"
-# echo "--------------------------"
-# exit 1 # Stop the script from running
 
 # List of individuals who satisfy both:
 # - Pass WES QC and are in ancestry group
@@ -37,13 +27,13 @@ PRED=${PRED_LOCAL}
 head $PRED
 
 PHENOFILE_LOCAL="$HOME/tmp-phenofile.tsv"
-if [ "$pheno_group" = "Height" ] || [[ "$pheno_group" == "original_phenos"* ]] || [[ "$pheno_group" == "microalbumin_urine_qced" ]] || [[ "${pheno_group}" == "standard_prs_controls" ]] || [[ "${pheno_group}" == "standardprs_"*"covariateresid_v2_2"* ]]; then
+if [ "$PHENO_GROUP" = "Height" ] || [[ "$PHENO_GROUP" == "original_phenos"* ]] || [[ "$PHENO_GROUP" == "microalbumin_urine_qced" ]] || [[ "${PHENO_GROUP}" == "standard_prs_controls" ]] || [[ "${PHENO_GROUP}" == "standardprs_"*"covariateresid_v2_2"* ]]; then
   gunzip -c $PHENOFILE_DNAX > $PHENOFILE_LOCAL
-elif [[ "$pheno_group" == "mahalanobis_v2_"* ]]; then
+elif [[ "$PHENO_GROUP" == "mahalanobis_v2_"* ]]; then
   # Add FID field
   gunzip -c $PHENOFILE_DNAX | awk '{ print $1,$0 }' | sed '1 s/^IID/FID/g' > $PHENOFILE_LOCAL
 else
-  echo "ERROR: Unrecognised pheno_group $pheno_group. Could not process PHENOFILE_DNAX into PHENOFILE_LOCAL." && exit 1
+  echo "ERROR: Unrecognised PHENO_GROUP $PHENO_GROUP. Could not process PHENOFILE_DNAX into PHENOFILE_LOCAL." && exit 1
 fi
 echo "PHENOFILE_LOCAL"
 head $PHENOFILE_LOCAL
@@ -78,7 +68,7 @@ fi
 
 if [[ "$MAF_OR_AAF" == "MAF" ]]; then
   # Get MAF from PLINK output and use as 'AAF' in place of actual AAF
-  allele_freq="/mnt/project/nbaya/regenie/data/allele_freq/ukb_wes_450k.qced.chr${CHROM}.${ANC}.${pheno_group}.${PHENOCOL}.frq"
+  allele_freq="/mnt/project/nbaya/regenie/data/allele_freq/ukb_wes_450k.qced.chr${CHROM}.${ANC}.${PHENO_GROUP}.${PHENOCOL}.frq"
 
   # Read uncompressed or compressed version
   if [ -f "${allele_freq}" ]; then

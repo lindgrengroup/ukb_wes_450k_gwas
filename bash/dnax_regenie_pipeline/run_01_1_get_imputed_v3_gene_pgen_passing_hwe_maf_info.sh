@@ -28,8 +28,8 @@ instance_type="mem1_ssd1_v2_x16"
 MAF_THRESHOLD="0.001"
 HWE_THRESHOLD="1e-10"
 INFO_THRESHOLD="0.8"
-RADIUS=0 # Minimal
-# RADIUS=1000000 # Default
+#RADIUS=0 # Minimal
+RADIUS=1000000 # Default
 # RADIUS=1500000 # Extended
 # RADIUS=2000000 # Extended more
 

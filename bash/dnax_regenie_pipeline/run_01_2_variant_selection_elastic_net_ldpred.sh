@@ -22,19 +22,19 @@ DNAX_DIR="/mnt/project/nbaya/outliers/data/imputed_v3_condition_variants/conditi
 
 # Determine PHENO_COL based on GENE mapping
 case "$GENE" in
-    "HNF1A"|"HNF4A"|"GCK")
+    "HNF1A"|"HNF4A"|"GCK"|"HNF1B"|"t2d-high_outlier_canonical_genes")
         PHENO_COL="t2d_case_prs_resid"
         ;;
     "LDLR")
         PHENO_COL="cad_case_prs_resid"
         ;;
-    "COL1A1"|"COL1A2")
+    "COL1A1"|"COL1A2"|"osteoporosis-high_outlier_canonical_genes")
         PHENO_COL="osteoporosis_case_prs_resid"
         ;;
     "SLC30A8"|"MSRA")
         PHENO_COL="t2d_ctrl_prs_resid"
         ;;
-    "APOB"|"PCSK9"|"ANGPTL3"|"HMGCR"|"ISL2"|"PNLDC1"|"HLA-DRB5")
+    "APOB"|"PCSK9"|"ANGPTL3"|"HMGCR"|"ISL2"|"PNLDC1"|"HLA-DRB5"|"cad-low_outlier_canonical_genes")
         PHENO_COL="cad_ctrl_prs_resid"
         ;;
     "NBPF3")
@@ -47,6 +47,13 @@ case "$GENE" in
 esac
 
 echo "Configuration: Gene=$GENE -> Phenotype=$PHENO_COL"
+
+# Define gene or pgen flag for R script
+if [[ "${GENE}" == *"_genes" ]]; then # If grouped genes
+  gene_pgen_flag="--pgen ${GENE}_radius${RADIUS}bp"
+else
+  gene_pgen_flag="--gene ${GENE}" # Single gene
+fi
 
 
 # Test Run: Set number of samples (e.g. 1000). Set to "" or 0 to disable (run full).
@@ -82,7 +89,7 @@ JOB_NAME="${MODE}_${GENE}_r${RADIUS}_${PHENO_COL}"
 
 # Base R command
 R_CMD="Rscript $R_SCRIPT_NAME \
-        --gene $GENE \
+        ${gene_pgen_flag} \
         --radius $RADIUS \
         --mode $MODE \
         --pheno_file $PHENO_FILE \

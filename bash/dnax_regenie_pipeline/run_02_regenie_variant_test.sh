@@ -89,12 +89,12 @@ for pheno_idx in {1..1}; do
       bfile="UKB.wes.merged.phased.full_qc.${anc_lower}.af05.popmax.pp0.90.spliceai=0.50_cadd=28.1_revel=0.773.${csq}.${encoding}.auto"
       job_out="regenie_variant_test.${anc}.${pheno_col}.${csq}.${encoding}"
     elif [[ "${VARIANT_TYPE}" == "pseudovariant_chr5filtered" ]]; then
-      if [[ "${anc}" != "EUR" ]] || "${csq}" != "pLoF_damaging_missense" ]]; then
+      if [[ "${anc}" != "EUR" ]] || [[ "${csq}" != "pLoF_damaging_missense" ]]; then
         echo "Warning: VARIANT_TYPE=pseudovariant_chr5filtered is only allowed for anc=EUR and csq=pLoF_damaging_missense. Skipping"
         continue
       fi
       bfile_dir="/wes_ko_ukbb/data/phased/encode_alt_qced_canonical/eur/spliceai=0.50_cadd=28.1_revel=0.773/filtered_chr5/vcf_plus_plink/force_chr_name"
-      bfile="UKB.wes.chr5.phased.qc_final.eur.af05.popmax.pp0.90.spliceai=0.50_cadd=28.1_revel=0.773.pLoF_damaging_missense.additive.chr5.filtered"
+      bfile="UKB.wes.chr5.phased.qc_final.${anc_lower}.af05.popmax.pp0.90.spliceai=0.50_cadd=28.1_revel=0.773.${csq}.${encoding}.chr5.filtered"
       job_out="regenie_variant_test.${anc}.${pheno_col}.${csq}.${encoding}.chr5filtered"
     else
       echo "Error: Invalid VARIANT_TYPE ${VARIANT_TYPE}. Exiting."
@@ -129,7 +129,7 @@ for pheno_idx in {1..1}; do
     exit 1
   fi
   
-  destination="/nbaya/regenie/data/step2/variant_tests/${anc}"
+  destination="/nbaya/regenie/data/step2/variant_tests/${PHENO_GROUP}/${anc}"
   dx mkdir -p ${destination}
   
   # Calculate number of jobs for this phenotype

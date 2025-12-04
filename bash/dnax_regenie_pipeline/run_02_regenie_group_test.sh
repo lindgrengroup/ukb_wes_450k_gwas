@@ -42,8 +42,8 @@ anc="EUR" # Genetic ancestry group (e.g. "EUR", "AFR", "EAS", etc.)
 #readonly PHENO_GROUP="original_phenos_bt" # Dichotomous traits (the original phenotypes corresponding to those used in misaligned project)
 #readonly PHENO_GROUP="standardprs_covariateresid_v2_2_ctrls" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
 #readonly PHENO_GROUP="standardprs_covariateresid_v2_2_cases" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
-readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
-#readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
+#readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
+readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
 #readonly PHENO_GROUP="microalbumin_urine_qced" # Only urine microalbumin (QCed following Sinott-Armstrong et al. procedure)
 
 # Variant annotation category
@@ -70,8 +70,9 @@ af_flags="--aaf-bins $AF_CUTOFF --vc-maxAAF $AF_CUTOFF"
 # condition_flags="" # This variable will no longer be used
 CONDITION_LIST_FILE=""
 if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
-  # Get Ensembl gene ID
-  CONDITION_ENSGID="$( bash _get_gene_ensgid.sh "$CONDITION_GENE_IMPUTED" )"
+  # Get Ensembl gene ID (default GRCh version: 38, because UKB WES uses build 38)
+  # This ENSGID is used to subset the burden testing in UKB WES to just the single gene
+  CONDITION_ENSGID="$( bash _get_gene_ensgid.sh "$CONDITION_GENE_IMPUTED" "38" )"
   
   # --- 3. Find Gene Coordinates (USING HELPER) ---
   echo "Fetching coordinates for ${CONDITION_GENE_IMPUTED}..."
@@ -166,7 +167,7 @@ PRED_PATH="${STEP1_DIR}/${PRED}"
 PRED_DNAX="/mnt/project/${STEP1_DIR}/${PRED}"
 
 # pheno_idx: One-indexed (i.e. starts with 1, ends with n)
-for pheno_idx in {2..2}; do
+for pheno_idx in {1..1}; do
 
   # Get phenotype column name (first column in pred file, in which each row is a different phenotype)
   pheno_col=$( dx cat ${PRED_PATH} | sed "${pheno_idx}q;d" | awk '{ print $1 }')

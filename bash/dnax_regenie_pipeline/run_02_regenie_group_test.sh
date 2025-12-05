@@ -42,13 +42,15 @@ anc="EUR" # Genetic ancestry group (e.g. "EUR", "AFR", "EAS", etc.)
 #readonly PHENO_GROUP="original_phenos_bt" # Dichotomous traits (the original phenotypes corresponding to those used in misaligned project)
 #readonly PHENO_GROUP="standardprs_covariateresid_v2_2_ctrls" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
 #readonly PHENO_GROUP="standardprs_covariateresid_v2_2_cases" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
-#readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
+# readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
 readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
 #readonly PHENO_GROUP="microalbumin_urine_qced" # Only urine microalbumin (QCed following Sinott-Armstrong et al. procedure)
 
 # Variant annotation category
 ANNOT_VERSION="v6" # Default used for most of my thesis, including the obesity project
 #ANNOT_VERSION="v7" # BRaVa default as of Aug 2025
+ANNOT_DIR="/mnt/project/nbaya/regenie/data/annotations/${ANNOT_VERSION}"
+
 
 # Get variables corresponding to `PHENO_GROUP`
 source _load_variables_for_pheno_group.sh
@@ -67,24 +69,11 @@ af_flags="--aaf-bins $AF_CUTOFF --vc-maxAAF $AF_CUTOFF"
 
 
 # --- Conditional Testing Options ---
-# condition_flags="" # This variable will no longer be used
 CONDITION_LIST_FILE=""
+
+# Condition on imputed v3 variants
 if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
-  # Get Ensembl gene ID (default GRCh version: 38, because UKB WES uses build 38)
-  # This ENSGID is used to subset the burden testing in UKB WES to just the single gene
-  CONDITION_ENSGID="$( bash _get_gene_ensgid.sh "$CONDITION_GENE_IMPUTED" "38" )"
-  
-  # --- 3. Find Gene Coordinates (USING HELPER) ---
-  echo "Fetching coordinates for ${CONDITION_GENE_IMPUTED}..."
-  gene_coords=$(bash ./_get_gene_coords.sh ${CONDITION_GENE_IMPUTED})
-
-  if [[ $? -ne 0 ]] || [[ -z "$gene_coords" ]]; then
-      echo "Error: Could not get coordinates for ${CONDITION_GENE_IMPUTED}." >&2
-      exit 1
-  fi
-
-  read -r CONDITION_CHROM_IMPUTED START_POS STOP_POS <<< "$gene_coords"
-  echo "Found ${CONDITION_GENE_IMPUTED} at ${CONDITION_CHROM_IMPUTED}:${START_POS}-${STOP_POS}"
+  # Options
 
   # Radius of conditioning window, added upstream and downstream of gene start/stop coordinates
   # Measured in base pairs
@@ -100,41 +89,17 @@ if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
   #CONDITION_VARIANT_SUBSET="all"
   CONDITION_VARIANT_SUBSET="elasticnet_seed1"
   #CONDITION_VARIANT_SUBSET="elasticnet_seed2"
-  
-  # Directory of files of variants lists to condition on
-  CONDITION_LIST_DIR="/mnt/project/nbaya/outliers/data/imputed_v3_condition_variants"
-  
-  ## 1. Define the FULL MOUNTED BGEN path ONCE
-  # CONDITION_FILE_MNT_PATH="/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb22828_c${CONDITION_CHROM_IMPUTED}_b0_v3.bgen"
-  CONDITION_FILE_MNT_PATH="${CONDITION_LIST_DIR}/condition_pgen/imputed_v3_qced_snps_maf0.001_hwe1e-10_info0.8_${CONDITION_GENE_IMPUTED}_radius${RADIUS}bp_chr${CONDITION_CHROM_IMPUTED}"
-  
-  if [[ "${CONDITION_GENE_IMPUTED}" == "HLA-DRB5" ]]; then
-    # For this gene, which has a conditioning window that's fully overlapping MHC, use MHC variants to condition, even though Thompson et al. do not use MHC region variants.
-    CONDITION_FILE_MNT_PATH+="_with_mhc"
-  fi
-  
-  # 2. Derive all other paths and filenames from it
-#   CONDITION_FILE_SAMPLE_MNT_PATH="${CONDITION_FILE_MNT_PATH%.bgen}.sample"
-  CONDITION_FILE_FILENAME="${CONDITION_FILE_MNT_PATH##*/}" # This gets just the filename
-#   CONDITION_FILE_SAMPLE_FILENAME="${CONDITION_FILE_SAMPLE_MNT_PATH##*/}" # This gets just the filename
-  
-  # Path to file containing variants (rsid/CHR:POS_REF_ALT if imputed v3; chrCHR:POS:REF:ALT if WES 450k) to condition on (uses --condition-list)
-  if [[ "${CONDITION_VARIANT_SUBSET}" == "all" ]]; then
-    CONDITION_LIST_FILE="tmp-${CONDITION_FILE_MNT_PATH##*/}.txt" # This gets just the filename for the condition pgen prefix and appends ".txt"
-  elif [[ "${CONDITION_VARIANT_SUBSET}" == "elasticnet"* ]]; then
-    # Extract seed from CONDITION_VARIANT_SUBSET
-    ELASTIC_NET_SEED="${CONDITION_VARIANT_SUBSET##*seed}"
 
-    # Use list of variants selected by elastic net regression (PRS ~ imputed variants in conditioning window)
-    CONDITION_LIST_FILE="${CONDITION_LIST_DIR}/lasso_elastic_net/imputed_v3_qced_snps_maf0.001_hwe1e-10_info0.8_${CONDITION_GENE_IMPUTED}_radius${RADIUS}bp_chr${CONDITION_CHROM_IMPUTED}_selected_variants_seed${ELASTIC_NET_SEED}.txt"
-  else
-    echo "Error: Invalid CONDITION_VARIANT_SUBSET: ${CONDITION_VARIANT_SUBSET}" >&2
-    exit
-  fi
+  # Load other variables for conditioning:
+  # - CONDITION_ENSGID
+  # - CONDITION_CHROM_IMPUTED
+  # - CONDITION_FILE_MNT_PATH
+  # - CONDITION_LIST_FILE
+  source _load_variables_for_conditioning.sh
 elif [[ "${PHENO_GROUP}" == "standardprs_unrelated_covariateresid_v2_2"* ]]; then
-  echo "NOTE: Not conditioning on any variants"
+  # This phenogroup is the only one where we typically condition, thus the note to alert that we aren't conditioning
+  echo "Note: Not conditioning on any variants"
 fi
-# -----------------------------------
 
 # Build flags as an array. This is the most robust way to handle
 # arguments that might contain spaces.
@@ -157,7 +122,6 @@ if [[ -n "${CONDITION_LIST_FILE}" ]]; then
       --extract-setlist="${CONDITION_ENSGID}"
       --max-condition-vars=20000
     )
-    # --condition-file-sample="${CONDITION_FILE_SAMPLE_FILENAME}"
   fi
 fi
 
@@ -167,7 +131,7 @@ PRED_PATH="${STEP1_DIR}/${PRED}"
 PRED_DNAX="/mnt/project/${STEP1_DIR}/${PRED}"
 
 # pheno_idx: One-indexed (i.e. starts with 1, ends with n)
-for pheno_idx in {1..1}; do
+for pheno_idx in {3..3}; do
 
   # Get phenotype column name (first column in pred file, in which each row is a different phenotype)
   pheno_col=$( dx cat ${PRED_PATH} | sed "${pheno_idx}q;d" | awk '{ print $1 }')
@@ -188,11 +152,7 @@ for pheno_idx in {1..1}; do
   LOCO="regenie_step1_${anc}_${PHENO_GROUP}_${pheno_idx}.loco"
   LOCO_PATH="${STEP1_DIR}/${LOCO}"
 
-    for chrom in {1..23}; do
-      if [ $chrom -eq 23 ]; then
-        chrom="X"
-      fi
-
+    for chrom in {1..22} "X" "GROUPED"; do
       if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
         if [ "$chrom" != "$CONDITION_CHROM_IMPUTED" ]; then
           continue
@@ -200,43 +160,36 @@ for pheno_idx in {1..1}; do
       fi
 
       # Genotype file
-      bfile="ukb_wes_450k.qced.chr${chrom}"
-      bfile_path="/Barney/wes/sample_filtered/${bfile}"
+      if [[ "${CONDITION_GENE_IMPUTED}" == *"_genes" ]]; then
+        # Grouped genes, possibly across chroms
+        bfile="${CONDITION_GENE_IMPUTED}_merged"
+        bfile_path="/nbaya/outliers/data/ukb_wes_grouped_genes/${bfile}"
+
+        # Define REGENIE annotation and setlist file templates
+        ANNOT_TEMPLATE="${ANNOT_DIR}/regenie_FILETYPE.${ANNOT_VERSION}.${CONDITION_GENE_IMPUTED}.txt"
+      else
+        # All genes in chrom, or
+        # Single gene in chrom
+        bfile="ukb_wes_450k.qced.chr${chrom}"
+        bfile_path="/Barney/wes/sample_filtered/${bfile}"
+
+        # Define REGENIE annotation and setlist file templates
+        ANNOT_TEMPLATE="${ANNOT_DIR}/regenie_FILETYPE.v${ANNOT_VERSION}.chr${chrom}.txt"
+      fi
 
       echo "Running REGENIE group test with ${bfile} for $anc $PHENO_GROUP $pheno_col"
 
-      # Allocate machine size based on size of bed file
-      bed_size=$( dx ls -l "${bfile_path}.bed" 2> /dev/null | cut -f5 -d' ' )
-      if (( $( echo "${bed_size} > 240" | bc ) )); then
-        instance_type="mem1_ssd1_v2_x36"
-        priority="high"
-      elif (( $( echo "${bed_size} > 120" | bc ) )); then
-        instance_type="mem1_ssd1_v2_x16"
-        priority="high"
-      elif (( $( echo "${bed_size} > 50" | bc ) )); then
-        instance_type="mem1_ssd1_v2_x8"
-        #instance_type="mem2_ssd1_v2_x8" && echo "############ OVERRIDING TEMPORARILY: mem3_ssd1_v2_x4 machines on low priority are fickle, using mem2_ssd1_v2_x8 instead "
-        #priority="low"
-        priority="high"
-      else
-        instance_type="mem1_ssd1_v2_x4"
-        priority="high"
-      fi
-
-      # TEMPORARY OVERRIDE
-      #priority="low"
-      #if [ $chrom -eq 9 ]; then
-      #  priority="high"
-      #fi
-      priority="high"
+      # Get DNAnexus machine instance type based on the size of the bed file
+      instance_type=$( bash ./_get_instance_type_for_bed_file.sh "${bfile_path}.bed" )
+      [[ $instance_type != "mem"* ]] && exit 1 # Exit if instance_type is invalid
+      priority="high" # Set job priority (low/normal/high)
 
       out="regenie_group_test.${anc}.${PHENO_GROUP}.${pheno_col}.${ANNOT_VERSION}annot.max${MAF_OR_AAF}${AF_CUTOFF}.chr${chrom}"
       job_name="regenie_group_test_${ANNOT_VERSION}_${anc}_${PHENO_GROUP}_${pheno_col}_c${chrom}"
       
-      
       if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
         destination="nbaya/regenie/data/step2/group_tests_conditioned/${PHENO_GROUP}/${anc}"
-        instance_type="mem3_ssd1_v2_x16"
+        #instance_type="mem3_ssd1_v2_x16"
         out+=".conditiongene${CONDITION_GENE_IMPUTED}.radius${RADIUS}bp"
         job_name="${job_name}_radius${RADIUS}bp_cond${CONDITION_GENE_IMPUTED}"
         
@@ -266,7 +219,7 @@ for pheno_idx in {1..1}; do
         -iin="${bfile_path}.bim" \
         -iin="${bfile_path}.fam" \
         -iin=${LOCO_PATH} \
-      	-icmd="${cmd_prefix} bash ${script} ${bfile}.bed ${anc} ${PHENO_GROUP} ${PRED_DNAX} ${pheno_col} ${PHENOFILE_DNAX} ${COVARFILE_DNAX} \"${flags_string}\" ${MAF_OR_AAF} ${ANNOT_VERSION} ${chrom} ${out}" \
+      	-icmd="${cmd_prefix} bash ${script} ${bfile}.bed ${anc} ${PHENO_GROUP} ${PRED_DNAX} ${pheno_col} ${PHENOFILE_DNAX} ${COVARFILE_DNAX} \"${flags_string}\" ${MAF_OR_AAF} ${ANNOT_TEMPLATE} ${chrom} ${out}" \
       	--name="$job_name" \
       	--instance-type "$instance_type" \
       	--priority="$priority" \

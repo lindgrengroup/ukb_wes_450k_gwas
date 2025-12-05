@@ -10,6 +10,11 @@ fi
 GENE_SYMBOL=$1
 DEFAULT_GRCH_VERSION=$2 # Options: 37, 38
 
+# If grouped gene, return GENE_SYMBOL and exit
+if [[ "${GENE_SYMBOL}" == *"_genes" ]]; then
+  echo "${GENE_SYMBOL}" && exit 0
+fi
+
 ENSEMBL_GRCh37_GFF="/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ensembl/Homo_sapiens.GRCh37.87.gff3.gz"
 ENSEMBL_GRCh38_GFF="/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/resources/ensembl/Homo_sapiens.GRCh38.115.gff3.gz"
 

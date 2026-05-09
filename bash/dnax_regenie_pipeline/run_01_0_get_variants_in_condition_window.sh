@@ -21,8 +21,8 @@ DESTINATION="/nbaya/outliers/data/imputed_v3_condition_variants/condition_window
 # +/-1.5Mb Finemapping window from FinnGen paper (Kurki et al. 2023 https://www.nature.com/articles/s41586-022-05473-8)
 # RADIUS=1500000
 # +/-1Mb window from "Polyfun" in UKB (Weissbrod et al. 2021 https://pmc.ncbi.nlm.nih.gov/articles/PMC7710571/)
-RADIUS=0
-# RADIUS=1000000
+# RADIUS=0
+RADIUS=1000000
 # RADIUS=1500000
 # RADIUS=2000000
 echo "Window radius: ${RADIUS}"

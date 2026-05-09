@@ -1604,3 +1604,167 @@ def saige_cct(pvals, weights=None):
         pval = 1 - stats.cauchy.cdf(cct_stat)
     
     return pval
+
+def read_regenie_gene_level_results(df_dict, path, remove_singleton_burden=True, is_max_maf=False, chroms=list(range(1,23))+['X'], cols_to_keep=[]):
+    assert '<CHR>' in path, "path should be a string, with <CHR> in place of the chromosome. For example, path='regenie.height.chr<CHR>.tsv.gz'"
+    df_list = []
+    for chrom in chroms:
+        tmp_df = pd.read_csv(
+            path.replace('<CHR>',str(chrom)),
+            sep=' ',
+            skiprows=1,
+            compression='gzip'
+        )
+        tmp_df['chrom'] = chrom
+        df_list.append(tmp_df)
+
+    genes = pd.concat(df_list)
+    genes['Group'] = genes['ID'].str.split('.',expand=True)[1]
+    genes['Region'] = genes['ID'].str.split('.',expand=True)[0]
+
+    # Remove singleton results
+    if remove_singleton_burden:
+        is_singleton = genes['ALLELE1'].str.endswith('singleton')
+        print(f'Excluding singleton burden results ({is_singleton.sum()} rows)')
+        genes = genes[~is_singleton]
+
+    # NOTE: This would normally be max_AAF when using REGENIE, but we explicitly instruct REGENIE to use an allele freq file that corresponds to the MAF
+    # NOTE: This step must come after removing singletons in order to cast the column to float
+    if is_max_maf:
+        genes['max_MAF'] = genes.apply(lambda row: row['ID'].replace(row['Group']+'.','').replace(row['Region']+'.',''), axis=1).astype(float)
+    else:
+        if 'maxmaf' in path.lower():
+            print('WARNING: path name suggests that results used max MAF, but is_max_maf=False')
+        genes['max_MAF'] = 'max AAF'
+        
+    # Separate rows by test
+    burden = genes[genes['TEST']=='ADD']
+    skat = genes[genes['TEST']=='ADD-SKAT']
+    skato = genes[genes['TEST']=='ADD-SKATO']
+
+    # Calculate P-values
+    burden['Pvalue_Burden'] = 10**(-burden['LOG10P'])
+    skat['Pvalue_SKAT'] = 10**(-skat['LOG10P'])
+    skato['Pvalue_SKATO'] = 10**(-skato['LOG10P'])
+    
+    # Rename log10 P-value fields
+    burden = burden.rename(columns={'LOG10P':'nlog10Pvalue_Burden'})
+    skat = skat.rename(columns={'LOG10P':'nlog10Pvalue_SKAT'})
+    skato = skato.rename(columns={'LOG10P':'nlog10Pvalue_SKATO'})
+
+    # Calculate/rename other fields
+    burden['A1_count'] = (2*burden['N']*burden['A1FREQ']).round().astype(int)
+    burden = burden.rename(columns={'BETA':'BETA_Burden','SE':'SE_Burden'})
+    
+    # Add gene symbol
+    gene_id_to_symbol_df = df_dict['csq'].rename(columns={'gene_id':'Region'})[['gene_symbol', 'Region']].drop_duplicates(subset='Region')
+    burden = burden.merge(gene_id_to_symbol_df, on='Region', how='left')
+    
+    # Merge results across tests (burden, skat, skato)
+    merge_on = ['Region','Group','max_MAF']
+    merged = burden.merge(skat[merge_on+['Pvalue_SKAT','nlog10Pvalue_SKAT']], on=merge_on)
+    merged = merged.merge(skato[merge_on+['Pvalue_SKATO','nlog10Pvalue_SKATO']], on=merge_on)
+    
+    # Reorder columns
+    merged = merged[
+        ['chrom','Region','Group','max_MAF']+
+        ['Pvalue_SKATO','Pvalue_Burden','Pvalue_SKAT']+
+        ['nlog10Pvalue_SKATO','nlog10Pvalue_Burden','nlog10Pvalue_SKAT']+
+        ['BETA_Burden','SE_Burden']+
+        ['A1_count','gene_symbol']+cols_to_keep
+    ]
+    
+    return merged
+
+
+def reformat_regenie_to_saige(df_gene):
+    # WARNING: Still uses v6 annotations
+    
+    # Gene-level results
+    df_gene['Group'] = df_gene['ID'].str.split('.',expand=True)[1]
+    df_gene['gene_id'] = df_gene['ID'].str.split('.',expand=True)[0]
+
+    gene_id_to_symbol_df = df_dict['csq'][[
+        'gene_symbol', 'gene_id'
+    ]].drop_duplicates(subset='gene_id')
+    df_gene = df_gene.merge(gene_id_to_symbol_df, on='gene_id', how='left')
+    df_gene = df_gene.rename(columns={'gene_id':'Region'})
+    
+    return df_gene
+
+
+def format_sig_figs(num, sig_figs=3):
+    """
+    Rounds a number to a specified number of significant figures and returns it
+    as a string, avoiding scientific notation.
+    """
+    import math
+    
+    if num == 0:
+        return "0"
+    
+    # Get the absolute value for magnitude calculation
+    abs_num = abs(num)
+    
+    # Check for the scientific notation requirement
+    if abs_num < 0.01 and abs_num != 0:
+        # Use 'e' formatting for scientific notation with the specified number of sig figs
+        # The precision specifier (sig_figs - 1) gives the correct number of digits after the decimal 
+        # for scientific notation, which corresponds to the total number of significant figures.
+        return f"{num:.{sig_figs - 1}e}"
+    
+    # Calculate the number of decimal places needed
+    magnitude = math.floor(math.log10(abs(num)))
+    decimal_places = (sig_figs - 1) - magnitude
+    
+    # If decimal_places is negative, we need to round to the left of the decimal point
+    if decimal_places < 0:
+        rounded_num = round(num, decimal_places)
+        return f"{int(rounded_num)}"
+    # Otherwise, use standard f-string formatting
+    else:
+        return f"{num:.{decimal_places}f}"
+    
+def calculate_empirical_pvalue(empirical_sumstats, observed_sumstat, sides='upper'):
+    """
+    Calculates the empirical p-value for an observed statistic.
+
+    Args:
+        empirical_sumstats (np.ndarray or list): Vector of statistics from the null distribution.
+        observed_sumstat (float): The observed test statistic.
+        sides (str): 'two-sided', 'upper', or 'lower' to determine the extremeness.
+
+    Returns:
+        float: The empirical p-value.
+    """
+    empirical_sumstats = np.asarray(empirical_sumstats)
+    N = len(empirical_sumstats)
+    
+    if N == 0:
+        return np.nan # Cannot calculate with no empirical data
+
+    if sides == 'upper':
+        # One-sided (Upper-tailed): Count how many empirical stats are >= observed
+        count = np.sum(empirical_sumstats >= observed_sumstat)
+    
+    elif sides == 'lower':
+        # One-sided (Lower-tailed): Count how many empirical stats are <= observed
+        count = np.sum(empirical_sumstats <= observed_sumstat)
+    
+    elif sides == 'two-sided':
+        # Two-sided: Count how many empirical stats are as extreme as or more extreme
+        # than the observed statistic. Extremeness is measured by the absolute value.
+        abs_observed = np.abs(observed_sumstat)
+        count = np.sum(np.abs(empirical_sumstats) >= abs_observed)
+        
+    else:
+        raise ValueError("Sides must be 'two-sided', 'upper', or 'lower'.")
+
+    # Add 1 to the numerator and denominator (Optional, but often used to avoid p=0)
+    # The 'plus one' method is often used to ensure the observed statistic itself 
+    # (or the one from the true data) is included in the count, which prevents a p-value of 0.
+    p_value = (count + 1) / (N + 1) # Davison & Hinkley (1997)
+#     print(p_value)
+    
+    # Ensure p-value is at least 1/N (or 1/(N+1) if using the adjustment)
+    return p_value

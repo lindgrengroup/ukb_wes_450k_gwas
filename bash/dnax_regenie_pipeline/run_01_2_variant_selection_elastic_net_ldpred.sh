@@ -4,34 +4,41 @@
 # CONFIGURATION
 # -------------------------------------------------------------------
 # Mode: "elastic_net" or "ldpred2"
-#MODE="elastic_net"
-MODE="ldpred2"
-
+MODE="elastic_net"
+#MODE="ldpred2"
 
 # Set the target GENE here
 GENE="$1"
 
+# Random Seed: Set an integer (e.g. 42) or leave empty for random.
+SEED=$2
+
 RADIUS=1000000
+#RADIUS=2000000
+
 PHENO_FILE="/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.standardprs_unrelated_covariateresid_v2_2.tsv.gz"
 GFF_PATH="/mnt/project/resources/ensembl/Homo_sapiens.GRCh37.87.gff3.gz"
 DNAX_DIR="/mnt/project/nbaya/outliers/data/imputed_v3_condition_variants/condition_pgen"
 
 # Determine PHENO_COL based on GENE mapping
 case "$GENE" in
-    "HNF1A"|"HNF4A"|"GCK")
+    "HNF1A"|"HNF4A"|"GCK"|"HNF1B"|"t2d-high_outlier_canonical_genes")
         PHENO_COL="t2d_case_prs_resid"
-        ;;
-    "APOB"|"PCSK9"|"ANGPTL3")
-        PHENO_COL="cad_ctrl_prs_resid"
         ;;
     "LDLR")
         PHENO_COL="cad_case_prs_resid"
         ;;
-    "SLC30A8")
+    "COL1A1"|"COL1A2"|"osteoporosis-high_outlier_canonical_genes")
+        PHENO_COL="osteoporosis_case_prs_resid"
+        ;;
+    "SLC30A8"|"MSRA")
         PHENO_COL="t2d_ctrl_prs_resid"
         ;;
-    "COL1A1"|"COL1A2")
-        PHENO_COL="osteoporosis_case_prs_resid"
+    "APOB"|"PCSK9"|"ANGPTL3"|"HMGCR"|"ISL2"|"PNLDC1"|"HLA-DRB5"|"cad-low_outlier_canonical_genes")
+        PHENO_COL="cad_ctrl_prs_resid"
+        ;;
+    "NBPF3")
+        PHENO_COL="osteoporosis_ctrl_prs_resid"
         ;;
     *)
         echo "Error: No phenotype mapping found for gene $GENE"
@@ -41,13 +48,17 @@ esac
 
 echo "Configuration: Gene=$GENE -> Phenotype=$PHENO_COL"
 
+# Define gene or pgen flag for R script
+if [[ "${GENE}" == *"_genes" ]]; then # If grouped genes
+  gene_pgen_flag="--pgen imputed_v3_qced_snps_maf0.001_hwe1e-10_info0.8_${GENE}_radius${RADIUS}bp"
+else
+  gene_pgen_flag="--gene ${GENE}" # Single gene
+fi
+
 
 # Test Run: Set number of samples (e.g. 1000). Set to "" or 0 to disable (run full).
 #TEST_SAMPLES=1000
 TEST_SAMPLES="" # If null, do full run
-
-# Random Seed: Set an integer (e.g. 42) or leave empty for random.
-SEED=$2
 
 # Output location
 PROJECT_OUT_DIR="/nbaya/outliers/data/imputed_v3_condition_variants/lasso_elastic_net/"
@@ -58,7 +69,7 @@ SCRIPT_REMOTE_DIR="/nbaya/outliers/scripts/"
 # 1. UPLOAD R SCRIPT
 # -------------------------------------------------------------------
 R_SCRIPT_NAME="variant_selection_elastic_net_ldpred.R"
-LOCAL_SCRIPT_PATH="/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_misaligned/R/${R_SCRIPT_NAME}"
+LOCAL_SCRIPT_PATH="/gpfs3/well/lindgren-ukbb/projects/ukbb-11867/nbaya/ukb_wes_450k_gwas/R/${R_SCRIPT_NAME}"
 REMOTE_SCRIPT_PATH="${SCRIPT_REMOTE_DIR}${R_SCRIPT_NAME}"
 
 echo "Uploading R script to $REMOTE_SCRIPT_PATH ..."
@@ -78,7 +89,7 @@ JOB_NAME="${MODE}_${GENE}_r${RADIUS}_${PHENO_COL}"
 
 # Base R command
 R_CMD="Rscript $R_SCRIPT_NAME \
-        --gene $GENE \
+        ${gene_pgen_flag} \
         --radius $RADIUS \
         --mode $MODE \
         --pheno_file $PHENO_FILE \
@@ -126,5 +137,6 @@ dx run swiss-army-knife \
    " \
    --instance-type "mem1_ssd1_v2_x16" \
    --destination "$PROJECT_OUT_DIR" \
+   --priority "high" \
    --brief \
    --yes

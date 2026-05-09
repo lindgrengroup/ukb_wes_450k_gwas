@@ -50,7 +50,7 @@ echo "Configuration: Gene=$GENE -> Phenotype=$PHENO_COL"
 
 # Define gene or pgen flag for R script
 if [[ "${GENE}" == *"_genes" ]]; then # If grouped genes
-  gene_pgen_flag="--pgen ${GENE}_radius${RADIUS}bp"
+  gene_pgen_flag="--pgen imputed_v3_qced_snps_maf0.001_hwe1e-10_info0.8_${GENE}_radius${RADIUS}bp"
 else
   gene_pgen_flag="--gene ${GENE}" # Single gene
 fi

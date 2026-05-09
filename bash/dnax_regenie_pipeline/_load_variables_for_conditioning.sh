@@ -54,6 +54,8 @@ elif [[ "${CONDITION_VARIANT_SUBSET}" == "elasticnet"* ]]; then
 
   # Use list of variants selected by elastic net regression (PRS ~ imputed variants in conditioning window)
   CONDITION_LIST_FILE="${CONDITION_LIST_DIR}/lasso_elastic_net/${CONDITION_FILE_PREFIX}_selected_variants_seed${ELASTIC_NET_SEED}.txt"
+elif [[ "${CONDITION_VARIANT_SUBSET}" == "not_conditioned" ]]; then
+  CONDITION_LIST_FILE="" # Leave blank, not conditioning
 else
   echo "Error: Invalid CONDITION_VARIANT_SUBSET: ${CONDITION_VARIANT_SUBSET}" >&2
   exit

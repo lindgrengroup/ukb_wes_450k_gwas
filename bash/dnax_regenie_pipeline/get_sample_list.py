@@ -19,7 +19,7 @@ def main(gwas_id, pheno_col, anc_list, sex='both_sexes'):
     bfile_path = f"/mnt/project/Barney/wes/sample_filtered/{bfile}"
     fam_path = f'{bfile_path}.fam'
 
-    fam = pd.read_csv(fam_path, delim_whitespace=True, names=[
+    fam = pd.read_csv(fam_path, sep='\s+', names=[
                       'fid', 'IID', 'MID', 'PID', 'SEX', 'PHENO'])
 
     if pheno_col == 'Height':
@@ -33,6 +33,12 @@ def main(gwas_id, pheno_col, anc_list, sex='both_sexes'):
         COVARFILE_DNAX = "/mnt/project/saige_pipeline/data/covariates/ukb_wes_standard_covs.tsv.gz"
     elif gwas_id.startswith('standardprs_covariateresid_v2_2'):
         PHENOFILE_DNAX = f"/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.standardprs_covariateresid_v2_2.tsv.gz"
+        COVARFILE_DNAX = "/mnt/project/saige_pipeline/data/covariates/ukb_wes_standard_covs.tsv.gz"
+    elif gwas_id.startswith('prs_as_covariate_v2_2_qt'):
+        PHENOFILE_DNAX = f"/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.prs_as_covariate_v2_2_qt.tsv.gz"
+        COVARFILE_DNAX = "/mnt/project/saige_pipeline/data/covariates/ukb_wes_standard_covs.tsv.gz"
+    elif gwas_id.startswith('prs_as_covariate_v2_2_bt'):
+        PHENOFILE_DNAX = f"/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.prs_as_covariate_v2_2_bt.tsv.gz"
         COVARFILE_DNAX = "/mnt/project/saige_pipeline/data/covariates/ukb_wes_standard_covs.tsv.gz"
     else:
         PHENOFILE_DNAX = f"/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.{gwas_id}.tsv.gz"

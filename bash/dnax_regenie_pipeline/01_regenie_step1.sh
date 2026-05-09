@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 anc="$1" # Genetic ancestry group (e.g. "EUR", "AFR", "EAS", etc.)
-pheno_group="$2" #"mahalanobis_v2_1_irnt_alpha0.01_upper_vs_inlier"
+pheno_group="$2" 
 PHENOFILE_DNAX="$3"
 pheno_col_flag="$4"
 COVARFILE_DNAX="$5"
@@ -19,7 +19,7 @@ BFILE_LOCAL="/mnt/project/nbaya/regenie/data/genotypes/ukb22418_b0_v2.autosomes"
 
 
 PHENOFILE_LOCAL="$HOME/tmp-phenofile.tsv"
-if [ "$pheno_group" = "Height" ] || [[ "$pheno_group" == "original_phenos"* ]] || [[ "$pheno_group" == "microalbumin_urine_qced" ]] || [[ "${pheno_group}" == "standard_prs_controls" ]] || [[ "${pheno_group}" == "standardprs_"*"covariateresid_v2_2_"* ]]; then
+if [ "$pheno_group" = "Height" ] || [[ "$pheno_group" == "original_phenos"* ]] || [[ "$pheno_group" == "microalbumin_urine_qced" ]] || [[ "${pheno_group}" == "standard_prs_controls" ]] || [[ "${pheno_group}" == "standardprs_"*"covariateresid_v2_2_"* ]] || [[ "${pheno_group}" == "prs_as_covariate_v2_2_"* ]]; then
   gunzip -c $PHENOFILE_DNAX > $PHENOFILE_LOCAL
 elif [[ "$pheno_group" == "mahalanobis_v2_"* ]]; then
   # Add FID field

@@ -43,8 +43,11 @@ anc="EUR" # Genetic ancestry group (e.g. "EUR", "AFR", "EAS", etc.)
 #readonly PHENO_GROUP="standardprs_covariateresid_v2_2_ctrls" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
 #readonly PHENO_GROUP="standardprs_covariateresid_v2_2_cases" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
 # readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
-readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
+#readonly PHENO_GROUP="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche; Also changed the ICD10 code definitions of CAD and osteoporosis
+readonly PHENO_GROUP="prs_as_covariate_v2_2_qt" # Subset to unrelateds from v2.2 misaligned pipeline for continuous (quantitative) traits (e.g. height, ldl, bmi)
+# readonly pheno_group="prs_as_covariate_v2_2_bt" # Subset to unrelated cases and unrelated controls from v2.2 misaligned pipeline for dichotomous (binary) traits (e.g t2d, cad, osteoporosis)
 #readonly PHENO_GROUP="microalbumin_urine_qced" # Only urine microalbumin (QCed following Sinott-Armstrong et al. procedure)
+
 
 # Variant annotation category
 ANNOT_VERSION="v6" # Default used for most of my thesis, including the obesity project
@@ -88,7 +91,8 @@ if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
   # - "elasticnet_seed<SEED NUMBER>" : Use variants selected by elastic net regression of PRS against imputed variants in window (e.g. "elasticnet_seed1")
   #CONDITION_VARIANT_SUBSET="all"
   CONDITION_VARIANT_SUBSET="elasticnet_seed1"
-  #CONDITION_VARIANT_SUBSET="elasticnet_seed2"
+  # CONDITION_VARIANT_SUBSET="elasticnet_seed2"
+  # CONDITION_VARIANT_SUBSET="not_conditioned" # use to run the grouped genes without conditioning
 
   # Load other variables for conditioning:
   # - CONDITION_ENSGID
@@ -112,15 +116,15 @@ flags_array=()
 [[ -n "${af_flags}" ]] && flags_array+=(${af_flags})
 
 
-# If CONDITION_LIST_FILE is not an empty string, build the condition_flags variable
-if [[ -n "${CONDITION_LIST_FILE}" ]]; then
+# If CONDITION_LIST_FILE is not an empty string and CONDITION_VARIANT_SUBSET is not "not_conditioned", build the condition_flags variable
+if [[ -n "${CONDITION_LIST_FILE}" ]] && [[ "${CONDITION_VARIANT_SUBSET}" != "not_conditioned" ]]; then
   # Add each argument as a separate, quoted element to the array
   flags_array+=(--condition-list="${CONDITION_LIST_FILE}")
   if [[ -n "${CONDITION_FILE_MNT_PATH}" ]]; then
     flags_array+=(
       --condition-file="pgen,${CONDITION_FILE_MNT_PATH}"
       --extract-setlist="${CONDITION_ENSGID}"
-      --max-condition-vars=20000
+      --max-condition-vars=50000
     )
   fi
 fi
@@ -131,7 +135,7 @@ PRED_PATH="${STEP1_DIR}/${PRED}"
 PRED_DNAX="/mnt/project/${STEP1_DIR}/${PRED}"
 
 # pheno_idx: One-indexed (i.e. starts with 1, ends with n)
-for pheno_idx in {3..3}; do
+for pheno_idx in {2..2}; do
 
   # Get phenotype column name (first column in pred file, in which each row is a different phenotype)
   pheno_col=$( dx cat ${PRED_PATH} | sed "${pheno_idx}q;d" | awk '{ print $1 }')
@@ -145,15 +149,13 @@ for pheno_idx in {3..3}; do
   # Convert array to a single string, joined by spaces.
   flags_string="${local_flags_array[*]}"
   
-#   flags_string="("${flags_array[@]}" "${pheno_col_flag}")" #$(printf " %q" "${local_flags_array[@]}")
-  
-  # flags="${trait_flag} ${pheno_col_flag} ${covar_flag} ${af_flags} ${condition_flags}" # This is the old, unsafe method
-
   LOCO="regenie_step1_${anc}_${PHENO_GROUP}_${pheno_idx}.loco"
   LOCO_PATH="${STEP1_DIR}/${LOCO}"
 
-    for chrom in {1..22} "X" "GROUPED"; do
+#     for chrom in {1..22} "X" "GROUPED"; do
+    for chrom in {21..21}; do 
       if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
+        # If conditioning, only run the chrom where gene is located
         if [ "$chrom" != "$CONDITION_CHROM_IMPUTED" ]; then
           continue
         fi
@@ -174,7 +176,7 @@ for pheno_idx in {3..3}; do
         bfile_path="/Barney/wes/sample_filtered/${bfile}"
 
         # Define REGENIE annotation and setlist file templates
-        ANNOT_TEMPLATE="${ANNOT_DIR}/regenie_FILETYPE.v${ANNOT_VERSION}.chr${chrom}.txt"
+        ANNOT_TEMPLATE="${ANNOT_DIR}/regenie_FILETYPE.${ANNOT_VERSION}.chr${chrom}.txt"
       fi
 
       echo "Running REGENIE group test with ${bfile} for $anc $PHENO_GROUP $pheno_col"
@@ -182,6 +184,13 @@ for pheno_idx in {3..3}; do
       # Get DNAnexus machine instance type based on the size of the bed file
       instance_type=$( bash ./_get_instance_type_for_bed_file.sh "${bfile_path}.bed" )
       [[ $instance_type != "mem"* ]] && exit 1 # Exit if instance_type is invalid
+      
+      if [[ -n "${CONDITION_GENE_IMPUTED}" ]]; then
+        # Get more memory for conditioning jobs
+        instance_type="$( echo $instance_type | sed 's/^mem1/mem2/g' )"
+        #instance_type="mem3_ssd1_v2_x32" # Override
+      fi
+      
       priority="high" # Set job priority (low/normal/high)
 
       out="regenie_group_test.${anc}.${PHENO_GROUP}.${pheno_col}.${ANNOT_VERSION}annot.max${MAF_OR_AAF}${AF_CUTOFF}.chr${chrom}"

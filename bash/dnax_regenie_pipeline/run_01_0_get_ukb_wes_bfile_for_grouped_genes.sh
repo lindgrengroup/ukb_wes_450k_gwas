@@ -13,7 +13,7 @@ GROUP_ID="$1"
 if [[ ${GROUP_ID} == "t2d-high_outlier_canonical_genes" ]]; then
 	GENE_ARRAY=( HNF1A HNF1B HNF4A GCK )
 elif [[ ${GROUP_ID} == "cad-low_outlier_canonical_genes" ]]; then
-	GENE_ARRAY=( APOB PCSK9 )
+	GENE_ARRAY=( APOB PCSK9 ANGPTL3 )
 elif [[ ${GROUP_ID} == "osteoporosis-high_outlier_canonical_genes" ]]; then
 	GENE_ARRAY=( COL1A1 COL1A2 )
 else

@@ -27,7 +27,7 @@ PRED=${PRED_LOCAL}
 head $PRED
 
 PHENOFILE_LOCAL="$HOME/tmp-phenofile.tsv"
-if [ "$PHENO_GROUP" = "Height" ] || [[ "$PHENO_GROUP" == "original_phenos"* ]] || [[ "$PHENO_GROUP" == "microalbumin_urine_qced" ]] || [[ "${PHENO_GROUP}" == "standard_prs_controls" ]] || [[ "${PHENO_GROUP}" == "standardprs_"*"covariateresid_v2_2"* ]]; then
+if [ "$PHENO_GROUP" = "Height" ] || [[ "$PHENO_GROUP" == "original_phenos"* ]] || [[ "$PHENO_GROUP" == "microalbumin_urine_qced" ]] || [[ "${PHENO_GROUP}" == "standard_prs_controls" ]] || [[ "${PHENO_GROUP}" == "standardprs_"*"covariateresid_v2_2"* ]] || [[ "${PHENO_GROUP}" == "prs_as_covariate_v2_2_"* ]]; then
   gunzip -c $PHENOFILE_DNAX > $PHENOFILE_LOCAL
 elif [[ "$PHENO_GROUP" == "mahalanobis_v2_"* ]]; then
   # Add FID field
@@ -35,6 +35,7 @@ elif [[ "$PHENO_GROUP" == "mahalanobis_v2_"* ]]; then
 else
   echo "ERROR: Unrecognised PHENO_GROUP $PHENO_GROUP. Could not process PHENOFILE_DNAX into PHENOFILE_LOCAL." && exit 1
 fi
+
 echo "PHENOFILE_LOCAL"
 head $PHENOFILE_LOCAL
 
@@ -148,6 +149,10 @@ regenie \
   --maxCatLevels 25 \
   --out $OUT
   
+if ! compgen -G "*regenie" > /dev/null; then
+  echo "Error: No files matching *regenie found."
+  exit 1
+fi
 
 mv *regenie ${OUT}.regenie
 

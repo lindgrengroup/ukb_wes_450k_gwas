@@ -36,6 +36,26 @@ elif [ "$PHENO_GROUP" = "original_phenos_bt" ]; then
 	PHENOCOLLIST=$( dx cat /saige_pipeline/data/phenotypes/phenotype_list.original_phenos.txt | grep "t2d\|cad\|osteoporosis" | paste -sd ',' )
   pheno_col_flag="--phenoColList=${PHENOCOLLIST}"
 
+elif [[ "$PHENO_GROUP" == "prs_as_covariate_v2_2"* ]]; then
+  # Get the phenotype which you want to regress out PRS from by taking the suffix of the PHENO_GROUP
+  # e.g. prs_as_covariate_v2_2_qt_height -> height
+  # e.g. prs_as_covariate_v2_2_bt_t2d -> t2d
+  pheno_with_prs="${PHENO_GROUP##*_}"
+
+  # Get the base phenotype group, with the phenotype suffix removed
+  pheno_group_base="${PHENO_GROUP%_${pheno_with_prs}}" # either prs_as_covariate_v2_2_qt or prs_as_covariate_v2_2_bt
+
+  PHENOFILE_DNAX="/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.${pheno_group_base}.tsv.gz"
+  if [[ "${PHENO_GROUP}" == "prs_as_covariate_v2_2_qt"* ]]; then
+    trait_flag="--qt --apply-rint"
+  elif [[ "${PHENO_GROUP}" == "prs_as_covariate_v2_2_bt"* ]]; then
+    trait_flag="--bt"
+  else
+    echo "ERROR: Expected ${PHENO_GROUP} to contain '_qt' or '_bt'" && exit 1
+  fi
+	
+  pheno_col_flag="--phenoColList=${pheno_with_prs}"
+
 elif [[ "${PHENO_GROUP}" == "standard_prs_controls" ]]; then
   PHENOFILE_DNAX="/mnt/project/saige_pipeline/data/phenotypes/ukb_wes.phenos_and_covariates.$PHENO_GROUP.tsv.gz"
   trait_flag="--qt" # IRNT already applied to the PRS
@@ -84,10 +104,15 @@ elif [[ "$PHENO_GROUP" == "mahalanobis_v2_"* ]] || [[ "${PHENO_GROUP}" == "stand
   COVARFILE_DNAX="/mnt/project/saige_pipeline/data/covariates/ukb_wes_standard_covs.tsv.gz"
   COVARCOLLIST="sequencing_tranche" # Only covariate to include because all others have been regressed out
   CATEGCOVARCOLLIST="sequencing_tranche"
-elif [[ "$PHENO_GROUP" == "original_phenos"* ]] || [[ "$PHENO_GROUP" == "microalbumin_urine_qced" ]] || [[ "${PHENO_GROUP}" == "standard_prs_controls" ]]; then
+elif [[ "$PHENO_GROUP" == "original_phenos"* ]] || [[ "$PHENO_GROUP" == "microalbumin_urine_qced" ]] || [[ "${PHENO_GROUP}" == "standard_prs_controls" ]] || [[ "${PHENO_GROUP}" == "prs_as_covariate_v2_2_"* ]]; then
   #COVARFILE_DNAX="/mnt/project/saige_pipeline/data/covariates/ukb_wes_standard_covs.tsv.gz"
   COVARFILE_DNAX=$PHENOFILE_DNAX
   COVARCOLLIST="age,age2,is_female,is_female_age,is_female_age2,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10,pc11,pc12,pc13,pc14,pc15,pc16,pc17,pc18,pc19,pc20,pc21,assessment_centre,sequencing_tranche"
+  
+  if [[ "${PHENO_GROUP}" == "prs_as_covariate_v2_2_"* ]]; then
+    COVARCOLLIST+=",prs_${pheno_with_prs}" # Include the phenotype PRS as a covariate
+  fi
+
   CATEGCOVARCOLLIST="is_female,assessment_centre,sequencing_tranche"
 else
   echo "ERROR: Unrecognised PHENO_GROUP $PHENO_GROUP. Could not define COVARCOLLIST." && exit 1

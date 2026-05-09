@@ -16,7 +16,7 @@ upload_file ${script_local} ${script_dnax}
 #dx upload ${script_local} --path ${script_dnax}
 
 ## OPTIONS
-readonly pheno_group="Height" # Uses BRaVa default covariates.
+#readonly pheno_group="Height" # Uses BRaVa default covariates.
 #readonly pheno_group="mahalanobis_v2_2_irnt_upper_vs_inlier" # Aligned status (upper vs. inlier); v2.2 uses unrelated individuals; v2.1 uses all available individuals
 #readonly pheno_group="mahalanobis_v2_2_irnt_lower_vs_inlier" # Aligned status (lower vs. inlier); v2.2 uses unrelated individuals; v2.1 uses all available individuals 
 #readonly pheno_group="original_phenos_qt" # Quantitative traits (the original phenotypes corresponding to those used in misaligned project)
@@ -27,31 +27,48 @@ readonly pheno_group="Height" # Uses BRaVa default covariates.
 #readonly pheno_group="standardprs_covariateresid_v2_2_cases" # NOT SUBSET TO UNRELATED, despite saying v2.2. Uses PRS z-score with all GWAS covariates regressed out, except for sequencing tranche.
 #readonly pheno_group="standardprs_unrelated_covariateresid_v2_2_ctrls" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche
 #readonly pheno_group="standardprs_unrelated_covariateresid_v2_2_cases" # Subset to unrelateds separately in cases and controls. Uses PRS (not z-score of PRS), then residualised for GWAS covariates except for sequencing tranche
+#readonly pheno_group="prs_as_covariate_v2_2_qt" # Subset to unrelateds from v2.2 misaligned pipeline for continuous (quantitative) traits (e.g. height, ldl, bmi)
+readonly pheno_group="prs_as_covariate_v2_2_bt" # Subset to unrelated cases and unrelated controls from v2.2 misaligned pipeline for dichotomous (binary) traits (e.g t2d, cad, osteoporosis)
 #readonly pheno_group="microalbumin_urine_qced"
 
-# Get variables corresponding to pheno_group
-export PHENO_GROUP=$pheno_group
-source _load_variables_for_pheno_group.sh # This script requires a global variable PHENO_GROUP
-
 # Define efine phenotype file and flags relevant to phenotype typeancestry group
-#readonly anc="AMR" # Genetic ancestry group (options: "EUR", "AFR", "EAS", "SAS", "AMR")
-for anc in {"EAS","SAS","EUR","AFR"}; do
-  #readonly BFILE="ukb22418_b0_v2.autosomes" # PLINK bfile to use to fit model (e.g. "ukb22418_b0_v2.autosomes")
+readonly anc="EUR" # Genetic ancestry group (options: "EUR", "AFR", "EAS", "SAS", "AMR")
+
+run_step1() {
+  _pheno_group=$1
+  _anc=$2
+  # Get variables corresponding to pheno_group
+  export PHENO_GROUP=$_pheno_group
+  source _load_variables_for_pheno_group.sh # This script requires a global variable PHENO_GROUP
   
-  echo "Running REGENIE step 1 on $anc for ${pheno_group}"
+  echo "Running REGENIE step 1 on $_anc for ${_pheno_group}"
   
-  destination="/nbaya/regenie/data/step1/${anc}"
+  destination="/nbaya/regenie/data/step1/${_anc}"
   dx mkdir -p ${destination}
   
   dx run swiss-army-knife \
   	-iin="${script_dnax}" \
-  	-icmd="""bash ${script} $anc $pheno_group ${PHENOFILE_DNAX} \"${pheno_col_flag}\" $COVARFILE_DNAX \"${covar_flag}\" \"${trait_flag}\" """ \
-  	--name="regenie_step1_${anc}_${pheno_group}" \
+  	-icmd="""bash ${script} $_anc $_pheno_group ${PHENOFILE_DNAX} \"${pheno_col_flag}\" $COVARFILE_DNAX \"${covar_flag}\" \"${trait_flag}\" """ \
+  	--name="regenie_step1_${_anc}_${_pheno_group}" \
   	--instance-type "mem1_ssd1_v2_x8" \
   	--priority="high" \
   	--destination="${destination}" \
   	--brief \
   	-y
-
   
-done
+}
+
+# Just for prs_as_covariate_v2_2_*
+if [[ "${pheno_group}" == "prs_as_covariate_v2_2_"* ]]; then
+  for pheno in $(  dx cat /saige_pipeline/data/phenotypes/phenotype_list.$pheno_group.txt ); do
+    #if [ "$pheno" = "t2d" ]; then
+    #  continue
+    #fi
+    run_step1 "${pheno_group}_${pheno}" "${anc}"
+  done
+else
+  run_step1 $pheno_group $anc
+  #for anc in {"EAS","SAS","EUR","AFR"}; do
+  #  run_step1 $pheno_group $anc
+  #done
+fi
